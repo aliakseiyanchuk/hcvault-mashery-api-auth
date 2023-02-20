@@ -19,6 +19,8 @@ set VAULT_ADDR=http://localhost:8200/
 %VAULT_EXEC% auth enable approle
 
 %VAULT_EXEC% write auth/approle/role/agent-demoRole token_policies=agent-mcc
+
+mkdir .secrets
 %VAULT_EXEC% read -format=json auth/approle/role/agent-demoRole/role-id | jq -r .data.role_id > ./.secrets/role-id.txt
 %VAULT_EXEC% write -format=json -f auth/approle/role/agent-demoRole/secret-id | jq -r .data.secret_id > ./.secrets/secret-id.txt
 

@@ -2,7 +2,7 @@ TEST?=$$(go list ./... | grep -v 'vendor')
 HOSTNAME=github.com
 NAMESPACE=aliakseiyanchuk
 VERSION=0.3
-BINARY=mashery-api-creds_v${VERSION}
+BINARY=hcvault-mashery-api-auth_v${VERSION}
 DEV_PLUGINS_DIR=./vault/plugins
 MASH_AUTH_DEV_BINARY=${BINARY}
 
@@ -11,15 +11,11 @@ default: install
 build: vendor
 	go build -o ${BINARY} cmd/main.go
 
-nexus_docker: vendor
-	GOOS=linux GOARCH=amd64 go build -o ./bin/${BINARY}_linux_amd64 				cmd/main.go
-	scripts/nexusPush.sh ./bin/${BINARY}_linux_amd64
-
-
 launch_dev_mode: kill_dev_vault
 	mkdir -p ${DEV_PLUGINS_DIR}
+	find ${DEV_PLUGINS_DIR} -type f -exec /bin/rm {} \;
 	go build -o ${DEV_PLUGINS_DIR}/${MASH_AUTH_DEV_BINARY} cmd/main.go
-	vault server -dev -dev-root-token-id=root -dev-plugin-dir=${DEV_PLUGINS_DIR} -log-level=trace &
+	vault server -dev -dev-root-token-id=root -dev-plugin-dir=${DEV_PLUGINS_DIR} -log-level=trace > ./vault/dev-server.log 2>&1 &
 	# Let the server start-up before proceeding with the mount
 	sleep 5
 	echo root | vault login -address=http://localhost:8200/ -
@@ -33,13 +29,13 @@ launch_dev_mode: kill_dev_vault
               -allowed-response-headers="X-Mashery-Responder" \
               ${MASH_AUTH_DEV_BINARY}
 
-	vault policy write agent-mcc ./samples/agent/grant_demoRole_policy.hcl
-	vault auth enable approle
+	vault policy write -address=http://localhost:8200/ agent-mcc ./samples/agent/grant_demoRole_policy.hcl
+	vault auth enable -address=http://localhost:8200/ approle
 
-	vault write auth/approle/role/agent-demoRole token_policies=agent-mcc
-	mkdir .secrets > /dev/null
-	vault read -format=json auth/approle/role/agent-demoRole/role-id | jq -r .data.role_id > ./.secrets/role-id.txt
-	vault write -format=json -f auth/approle/role/agent-demoRole/secret-id | jq -r .data.secret_id > ./.secrets/secret-id.txt
+	vault write -address=http://localhost:8200/ auth/approle/role/agent-demoRole token_policies=agent-mcc
+	if [ ! -d ./.secrets ]; then mkdir .secrets > /dev/null; fi
+	vault read -address=http://localhost:8200/ -format=json auth/approle/role/agent-demoRole/role-id | jq -r .data.role_id > ./.secrets/role-id.txt
+	vault write -address=http://localhost:8200/ -format=json -f auth/approle/role/agent-demoRole/secret-id | jq -r .data.secret_id > ./.secrets/secret-id.txt
 # Do some testing, then execute `make kill_dev_vault` to clean-up
 
 kill_dev_vault:
@@ -70,7 +66,7 @@ install: build
 	mv ${BINARY} ./vault/plugins
 
 test: FORCE
-	cd ./bdd && go test
+	go test ./mashery
 
 testacc: kill_dev_vault install launch_dev_mode
 	go test ./bdd -v

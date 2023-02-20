@@ -2,8 +2,10 @@ package bdd_test
 
 import (
 	"encoding/json"
+	"fmt"
 	vault "github.com/hashicorp/vault/api"
 	"github.com/stretchr/testify/assert"
+	"os"
 	"testing"
 )
 
@@ -38,8 +40,20 @@ func vaultAPIMap(i interface{}) map[string]interface{} {
 }
 
 func mount(path string) error {
+	execName := "hcvault-mashery-api-auth"
+
+	if files, err := os.ReadDir("../vault/plugins"); err == nil {
+		if len(files) == 1 {
+			execName = files[0].Name()
+		} else {
+			fmt.Println("WARN: ambiguous plugin name. Mount can fail. Leave a single file in vault plugins directory")
+		}
+	} else {
+		fmt.Println(err.Error())
+	}
+
 	req := vault.MountInput{
-		Type:        "mashery-api-auth.exe",
+		Type:        execName,
 		Description: "Mount for unit testing",
 	}
 	_, err := vcl.Logical().Write("/sys/mounts/"+path, vaultAPIMap(req))

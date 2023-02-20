@@ -12,4 +12,12 @@
 *.out
 
 # Dependency directories (remove the comment below to include it)
-# vendor/
+vendor/
+vault/
+/mashery-api-auth.iml
+/docker/mashery-api-auth_*
+/.idea/
+/bin/
+/test/role-id.txt
+/test/secret-id.txt
+/.secrets/

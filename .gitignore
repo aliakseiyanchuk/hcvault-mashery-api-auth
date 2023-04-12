@@ -21,3 +21,7 @@ vault/
 /test/role-id.txt
 /test/secret-id.txt
 /.secrets/
+/docker/tls-enabled/hcvault-mashery-api-auth_v*
+/docker/tls-enabled/vault-container.*
+/samples/autonomous-setup/.secret/certs.json
+/samples/autonomous-setup/.secret/unseal.json.enc

@@ -16,7 +16,7 @@ services:
         mode: host
     build:
       context: .
-      dockerfile: ./Dockerfile
+      dockerfile: Dockerfile
 
     command: [ "vault", "server", "-config=/vault/config" ]
 

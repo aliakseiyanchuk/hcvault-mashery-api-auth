@@ -1,7 +1,7 @@
 FROM vault:latest
 
 # You may want to budnle additional resources, such as SSL certificates
-COPY ./config.hcl /vault/config
+COPY config.hcl /vault/config
 RUN mkdir -p /vault/plugins
 # The executable should be available in the root directory.
 COPY ./hcvault-mashery-api-auth_v* /vault/plugins

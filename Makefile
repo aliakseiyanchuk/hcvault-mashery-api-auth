@@ -43,9 +43,23 @@ kill_dev_vault:
 
 
 launch_docker:
-	GOOS=linux GOARCH=amd64 go build -o ./docker/${BINARY}_${VERSION} 					cmd/main.go
-	sudo docker-compose -f ./docker/docker-compose.yaml build
-	sudo docker-compose -f ./docker/docker-compose.yaml up
+	GOOS=linux GOARCH=amd64 go build -o ./docker/local-no-tls/${BINARY} 					cmd/main.go
+	sudo docker-compose -f ./docker/local-no-tls/docker-compose.yaml build
+	sudo docker-compose -f ./docker/local-no-tls/docker-compose.yaml up
+
+build_tls_enabled_container_amd64:
+	GOOS=linux GOARCH=amd64 go build -o ./docker/tls-enabled/${BINARY} 						cmd/main.go
+	docker build ./docker/tls-enabled -t lspwd2/hcvault-mashery-api-auth:${VERSION} -t lspwd2/hcvault-mashery-api-auth:latest
+
+run_tls_enabled_container_amd64: build_tls_enabled_container_amd64
+	docker run --cap-add=IPC_LOCK -p 8200:8200 lspwd2/hcvault-mashery-api-auth:latest
+
+build_tls_enabled_container_arm:
+	GOOS=linux GOARCH=arm64 go build -o ./docker/tls-enabled/${BINARY} 						cmd/main.go
+	docker build ./docker/tls-enabled -t lspwd2/hcvault-mashery-api-auth:${VERSION} -t lspwd2/hcvault-mashery-api-auth-arm:latest
+
+run_tls_enabled_container_arm: build_tls_enabled_container_arm
+	docker run --cap-add=IPC_LOCK -p 8200:8200 lspwd2/hcvault-mashery-api-auth-arm:latest
 
 release:
 	GOOS=darwin GOARCH=amd64 go build -o ./bin/${BINARY}_${VERSION}_darwin_amd64 			cmd/main.go

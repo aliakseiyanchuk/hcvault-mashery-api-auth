@@ -7,6 +7,13 @@ listener "tcp" {
   tls_key_file = "/vault/tls/vault-container.key"
 }
 
+listener "tcp" {
+  address = "127.0.0.1:8973"
+  tls_disable = "true"
+}
+
+api_addr = "http://127.0.0.1:8973"
+
 storage "file" {
   path = "/vault/file"
 }

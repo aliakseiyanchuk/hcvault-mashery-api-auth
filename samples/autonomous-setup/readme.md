@@ -7,7 +7,8 @@ just-in-time access to the Mashery sensitive keys on the operator's device.
 To set up Vault in the docker container, you would need:
 
 - Basic knowledge of running shell scripts.
-- HashiCorp vault [installed on your machine](https://developer.hashicorp.com/vault/docs/install) (so that `vault` command is accessible in the terminal)
+- Latest HashiCorp vault [installed on your machine](https://developer.hashicorp.com/vault/docs/install) (so that `vault` command is accessible in the terminal)
+- `jq` command
 - a running Docker;
 - an TLS certificate for your own Vault setup (highly advised; but can be skipped if you are in hurry)
 - a strong pass phrase you can easily remember to secure sensitive vault keys

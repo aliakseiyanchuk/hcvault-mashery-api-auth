@@ -7,13 +7,15 @@ just-in-time access to the Mashery sensitive keys on the operator's device.
 To set up Vault in the docker container, you would need:
 
 - Basic knowledge of running shell scripts.
-- Latest HashiCorp vault [installed on your machine](https://developer.hashicorp.com/vault/docs/install) (so that `vault` command is accessible in the terminal)
+- Latest HashiCorp vault [installed on your machine](https://developer.hashicorp.com/vault/docs/install) (so
+  that `vault` command is accessible in the terminal)
 - `jq` command
 - a running Docker;
 - an TLS certificate for your own Vault setup (highly advised; but can be skipped if you are in hurry)
 - a strong pass phrase you can easily remember to secure sensitive vault keys
 
 After following this guide, you will have:
+
 - initialized Vault with Mashery secret engine enabled
 - encrypted unseal script ensuring that only the operator can access the Mashery configuration
 - obtained Vault-specific certificates to login
@@ -23,7 +25,6 @@ After following this guide, you will have:
 You can copy the contents of this directory to the convenient location on your machine. It contains scripts and useful
 templates that will be used during the setup. You may want to change the owner and change execution permissions on the
 shell scripts to match the user that will be running these.
- 
 
 ## Replacing bundled TLS certificate
 
@@ -35,19 +36,24 @@ You are strongly encouraged to replace the bundled certificates with the ones th
 you want to install. Method to create TLS certificates vary greatly and depend on many considerations. A good starting
 point would be to use the services of major cloud providers, such as Azure KeyVault or AWS Certificate Manager.
 
-To replace the TLS certificates, replace `vault-container.pem` and `vault-container.key` files containing the certificate
-and decrypted private key respectively e.g. using the following Dockerfile (see [`step_1`](./step_1) directory:
+To replace the TLS certificates, replace `vault-container.pem` and `vault-container.key` files containing the
+certificate
+and decrypted private key respectively e.g. using the following Dockerfile (see [`prepare`](./prepare) directory:
+
 ```dockerfile
 FROM lspwd2/hcvault-mashery-api-auth:latest
 
 COPY ./vault-container* /vault/tls
 ```
+
 This Dockerfile can be built and run e.g. with the following command
+
 ```shell
 $ docker build . -t my-mash-vault
 ```
 
 Alternatively, if you are fine with using the bundled certificates, you could configure your system to trust it.
+
 ```shell
 -----BEGIN CERTIFICATE-----
 MIIFXTCCA0WgAwIBAgIQYvjKUQz4QRuiZlS8YYvERTANBgkqhkiG9w0BAQsFADAYMRYwFAYDVQQD
@@ -77,35 +83,68 @@ lZIxWbWGIJ/F8S8XyV1ZprSSz+jk/nYliLsA8Pf2JqGAfbQCORn81B/z0wVSLX6N6fkg0QQA04fY
 qDlC+KxJP/QN
 -----END CERTIFICATE-----
 ```
+
 ## Prepare the terminal session
 
 The setup and operations in this guide are performed using CLI scripts. It is important to make sure that your terminal
 session is prepared.
 
 ### Setting `VAULT_ADDR` variable
-Ensure that the `VAULT_ADDR` is pointing to the correct host name. A sensible default is `https://localhost:8200/`, which
+
+Ensure that the `VAULT_ADDR` is pointing to the correct host name. A sensible default is `https://localhost:8200/`,
+which
 can be set as
+
 ```shell
 $ export VAULT_ADDR=https://localhost:8200/
 ```
-### Specifying seal file pass phrase
-> **Security consideration**
->
-> The reason for this step is to ensure that only owner of the device is able to start the operation of the Vault. To
-> ensure that this condition is met, do not store this pass phrase in the clear on your device. Also bear in mind
-> that there is no way to recover this pass phrase if you forget it! Write the pass phrase e.g. on a piece of paper and
-> put it in a secure location.
 
-The seal file pass phrase protects keys that can be used to get root access to Vault. Each time you start a terminal 
-session that performs Vault sealing or unsealing, you will need to add `HCV_SEALFILE_PASS` environment variable by running:
+### Specifying unseal file pass phrase
+
+> **Unseal keys protection limitations**
+>
+> As a user of Vault, you need to be familiar with  [Vault seal](https://developer.hashicorp.com/vault/docs/concepts/seal#seal-unseal)
+> procedure. A production setup would require distributing the unseal keys to multiple people. This guide assumes that
+> there will be a _single_ Vault operator. This makes unseal key distribution unfeasible.
+>
+> A viable solution to ensure that only device owner is able to unseal the Vault container is to encrypt
+> critical data at rest. This data is termed *unseal keys*. The encryption requires the device owner to supply these at
+> runtime.
+> 
+> Do not store this pass phrase in the clear on your device.
+> 
+> Also bear in mind that there is no way to recover this pass phrase if you forget it! Write the pass phrase e.g. 
+> on a piece of paper and put it in a secure location.
+
+The unseal file pass phrase protects unseal keys that can be used to get root access to Vault. Each time you start a terminal
+session that performs Vault sealing or unsealing, you will need to add `HCV_SEALFILE_PASS` environment variable by
+running:
+
 ```shell
-export HCV_SEALFILE_PASS="<pass phrase you can easily remember>"
+read HCV_SEALFILE_PASS; export HCV_SEALFILE_PASS
 ```
 
 ## Starting and testing connection
-The 
 
-Finally, check that `vault` command is able to talk to your vault
+Vault operation required IPC_LOCK capability ot run. This needs to enabled by passing `--cap-add=IPC_LOCK`
+to the command line.
+
+```shell
+docker run --cap-add=IPC_LOCK -p 8200:8200 lspwd2/hcvault-mashery-api-auth:latest
+```
+
+## First-time setup
+Vault needs to be initialized before it can be used.
+
+> Setup Tip
+>
+> If you are experimenting with the setup, up may want to include `--rm` options to the container startup. This way
+> the container will be destroyed when finished.
+
+### Check uninitialized status
+
+Verify that `vault` command is able to talk to your vault amd that `vault` trusts the TLS certificate
+the container presents by running the following command:
 ```shell
 $ vault status
 ```
@@ -125,13 +164,39 @@ Build Date         2023-03-23T12:51:35Z
 Storage Type       file
 HA Enabled         false
 ```
+
 This indicates that you have a Vault that hasn't been initialized.
 
+### Initializing Vault
 
+In order to start using the Vault with Mashery authentication plugin, numerous steps need to be made. These are
+automated in the [initialization script](./admin/init_vault.sh) which will perform the required setup steps.
 
-## Initializing Vault
-Next step is to initialize [Vault seal](https://developer.hashicorp.com/vault/docs/concepts/seal#seal-unseal). This
-mechanism is suitable for production-grade installation. Since the objective is to provide a single-user vault, 
-this guide suggests a simplified alternative: store unsealed keys in an encrypted file on the operator's device.
+```shell
+$ init_vault.sh
+```
+This script performs the following operations:
+- initializes the vault seal and stores unseal keys in an encrypted file;
+- registers and mounts Mashery authentication plugin
+- issues TLS certificate for administrator authentication
+- creates policy granting access to Mashery authentication plugin
+- configured administrator entity and alias within Vault identity (see
+  [this page](https://developer.hashicorp.com/vault/docs/concepts/identity) for more information)
+- creates AppRole role for running and authenticating Vault agents performing automatic logins
+
+## Unsealing
+When you start a container where Vault that has previous been initialized, first step you need to unseal it by running
+the `unseal.sh` script. 
+```shell
+$ ./unseal.sh
+```
+Once unsealed, the Vault can run for any extended period of time (e.g. several days, weeks or months)
+
+## Daily operations
+
+The initialization script has setup 
+
+## Certificate renewal
+
 
 

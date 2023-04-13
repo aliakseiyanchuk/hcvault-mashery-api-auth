@@ -3,18 +3,15 @@
 DIR_PREFIX=$(dirname "$0")
 . $DIR_PREFIX/functions.sh || exit 1
 
+verifyPreconditions
+
 initLocations "$DIR_PREFIX"
+loadIdentity
 
-MASH_AUTH_BINARY=hcvault-mashery-api-auth_v0.3
-MASH_AUTH_BINARY_SHA=2992674a8c3ed61a7bb974ea89ebf7ddba2cdb2e4bcf3f93bc70f28e4dc1c275
-
-# You may want to change this to suit your needs.
-OPERATOR_EMAIL_DOMAIN=operations.local
-OPERATOR_EMAIL=local.admin@$OPERATOR_EMAIL_DOMAIN
-
+. $DIR_PREFIX/pluginInfo.sh || exit 1
 
 # Make sure the script will stop when the first error will occur
-set -ex
+set -e
 
 echo "Initializing and unsealing vault..."
 vault operator init -format=json | openssl enc -a -aes-128-cbc -pass env:HCV_SEALFILE_PASS -out "$UNSEAL_FILE"
@@ -25,6 +22,7 @@ passUnsealToken 2
 
 echo "Logging in as root user..."
 rootLogin
+trap 'vault token revoke -self > /dev/null' EXIT
 
 echo "Enabling Mashery secrets engine"
 vault plugin register \
@@ -43,16 +41,23 @@ vault secrets enable -path=mash-auth \
 echo "Setting up user certificate login"
 vault secrets enable pki
 vault secrets tune -max-lease-ttl=87600h pki
-vault write pki/root/generate/internal common_name="Mashery Vault Users" ttl=876h
+vault write pki/root/generate/internal common_name="Local Vault Users" ttl=87600h
+
+# Default certificate TTL is 1 week, after which it need to be rotated.
+# Only accept email from the specified domain
+# common name must be an email
+# Allow email addresses directly at the specified email domain
+# Sub-domains are not required for the single operator
+ # Wildcards have no practical applications
 vault write pki/roles/mashery-admin \
+  ttl=178h max_ttl=336h \
   allowed_domains=$OPERATOR_EMAIL_DOMAIN \
   cn_validations=email \
-  allow_bare_domains=true allow_subdomains=false allow_wildcard_certificates=false
+  allow_bare_domains=true \
+  allow_subdomains=false \
+  allow_wildcard_certificates=false ;
 
-vault write pki/issue/mashery-admin common_name=$OPERATOR_EMAIL -format=json > "$CERTS_FILE"
-jq -r .data.private_key   "$CERTS_FILE" > "$CERT_KEY"
-jq -r .data.certificate   "$CERTS_FILE" > "$CERT_PEM"
-jq -r .data.issuing_ca    "$CERTS_FILE" > "$CA_PEM"
+issueUserCertificate
 
 echo "Enabling operator TLS-based authentication"
 vault auth enable cert

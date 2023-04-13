@@ -6,7 +6,7 @@ DIR_PREFIX=$(dirname "$0")
 initLocations "$DIR_PREFIX"
 
 if [ "$HCV_SEALFILE_PASS" = "" ] ; then
-  echo "Please specify password protecting unseal keys by running: read HCV_SEALFILE_PASS"
+  echo "Please specify password protecting unseal keys by running: read HCV_SEALFILE_PASS; export HCV_SEALFILE_PASS"
   exit 1
 fi
 

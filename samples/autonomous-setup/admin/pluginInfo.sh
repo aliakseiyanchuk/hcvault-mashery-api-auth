@@ -1,0 +1,4 @@
+#!/bin/sh
+
+MASH_AUTH_BINARY=hcvault-mashery-api-auth_v0.3
+MASH_AUTH_BINARY_SHA=2992674a8c3ed61a7bb974ea89ebf7ddba2cdb2e4bcf3f93bc70f28e4dc1c275

@@ -7,6 +7,7 @@ just-in-time access to the Mashery sensitive keys on the operator's device.
 To set up Vault in the docker container, you would need:
 
 - Basic knowledge of running shell scripts.
+- A terminal capable of interpreting shell scripts. Windows-based hosts can 
 - Latest HashiCorp vault [installed on your machine](https://developer.hashicorp.com/vault/docs/install) (so
   that `vault` command is accessible in the terminal)
 - `jq` command
@@ -92,8 +93,7 @@ session is prepared.
 ### Setting `VAULT_ADDR` variable
 
 Ensure that the `VAULT_ADDR` is pointing to the correct host name. A sensible default is `https://localhost:8200/`,
-which
-can be set as
+which can be set with `export VAULT_ADDR=https://localhost:8200/`.
 
 ```shell
 $ export VAULT_ADDR=https://localhost:8200/
@@ -116,34 +116,43 @@ $ export VAULT_ADDR=https://localhost:8200/
 > Also bear in mind that there is no way to recover this pass phrase if you forget it! Write the pass phrase e.g. 
 > on a piece of paper and put it in a secure location.
 
-The unseal file pass phrase protects unseal keys that can be used to get root access to Vault. Each time you start a terminal
-session that performs Vault sealing or unsealing, you will need to add `HCV_SEALFILE_PASS` environment variable by
-running:
+The unseal file pass phrase protects unseal keys stored on disk of your device. These unseal keys can be used to get 
+root access to Vault. Therefore, each time a root-level operation needs to be performed, the owner of the device
+must supply the password. 
+
+If you need to perform several root-level operations, you can add `HCV_SEALFILE_PASS` environment variable by
+running the following command line:
 
 ```shell
-read HCV_SEALFILE_PASS; export HCV_SEALFILE_PASS
+read -s HCV_SEALFILE_PASS; export HCV_SEALFILE_PASS
 ```
 
 ## Starting and testing connection
 
 Vault operation required IPC_LOCK capability ot run. This needs to enabled by passing `--cap-add=IPC_LOCK`
-to the command line.
+to the command line. 
 
 ```shell
-docker run --cap-add=IPC_LOCK -p 8200:8200 lspwd2/hcvault-mashery-api-auth:latest
+docker run --cap-add=IPC_LOCK -p 127.0.0.1:8200:8200 lspwd2/hcvault-mashery-api-auth:latest
+```
+Apple machines running M1 and M2 chips should use arm version:
+```shell
+docker run --cap-add=IPC_LOCK -p 127.0.0.1:8200:8200 lspwd2/hcvault-mashery-api-auth-arm:latest
 ```
 
 ## First-time setup
-Vault needs to be initialized before it can be used.
+After you have started container for the very first time, you need to initialize your Vault 
+before it can be used. This procedure needs to be done exactly once per lifetime of your container.
 
 > Setup Tip
 >
 > If you are experimenting with the setup, up may want to include `--rm` options to the container startup. This way
-> the container will be destroyed when finished.
+> the container will be destroyed when finished. In case you won't include the `--rm` option, the container will
+> create a volume at a Docker default location.
 
 ### Check uninitialized status
 
-Verify that `vault` command is able to talk to your vault amd that `vault` trusts the TLS certificate
+Before starting, verify that `vault` command is able to talk to your vault amd that `vault` trusts the TLS certificate
 the container presents by running the following command:
 ```shell
 $ vault status
@@ -165,12 +174,15 @@ Storage Type       file
 HA Enabled         false
 ```
 
-This indicates that you have a Vault that hasn't been initialized.
+This indicates that you have a Vault that hasn't been initialized, and Vault trusts the TLS certificate the container
+presents. 
+> In case `vault` command doesn't trust the certificate, it needs to be added to the certificate trust store. This
+> depends on the system where you are trying to run the scripts.
 
 ### Initializing Vault
 
 In order to start using the Vault with Mashery authentication plugin, numerous steps need to be made. These are
-automated in the [initialization script](./admin/init_vault.sh) which will perform the required setup steps.
+automated in the [initialization script](bin/init_vault.sh) which will perform the required setup steps.
 
 ```shell
 $ init_vault.sh
@@ -184,7 +196,9 @@ This script performs the following operations:
   [this page](https://developer.hashicorp.com/vault/docs/concepts/identity) for more information)
 - creates AppRole role for running and authenticating Vault agents performing automatic logins
 
-## Unsealing
+## Daily operations
+
+### Unsealing
 When you start a container where Vault that has previous been initialized, first step you need to unseal it by running
 the `unseal.sh` script. 
 ```shell
@@ -192,11 +206,44 @@ $ ./unseal.sh
 ```
 Once unsealed, the Vault can run for any extended period of time (e.g. several days, weeks or months)
 
-## Daily operations
+### Logging into Vault. Logging out
 
-The initialization script has setup 
+The init script has configured a certificate-based login into vault. Run this script to receive a user token 
+```shell
+$ ./vault_login.sh
+```
+This command will create an access token to Vault that will be valid for 8 hours. After this time, the token will
+expire. The remaining lifetime of the token can be obtianed by running the command
+```shell
+$ vault token lookup
+```
+and examining the value printed in the `ttl` field.
 
-## Certificate renewal
+You can renew the token any time by running the `vault_login.sh` script again.
+
+> Security Tip
+> 
+> Although the access token is relatively short-lived, it is nevertheless a good habit to logout from Vault after
+> you are done with the operation at hand. With Vault, logging out is achieved by revoking the Vault access token
+> by running the `vault token revoke -self` command.
 
 
+### Interacting with Mashery Authentication plugin
 
+After you have logged into Vault, you can interact with desired paths of the Mashery credentials secret engine via
+`vault` read and write commands. Refer to the [documentation guides](../../doc)
+
+## User certificate renewal
+
+The certificates for the user logging into the Vault are valid for 7 days. After these expire, you need to re-issue
+the user certificate again. The certificate rotation is performed using the following command:
+```shell
+$ ./rotateUserCert.sh
+```
+> Executing this command requires unseal key password. This is referred to as a requirement to ensure that no 
+> session can run indefinitely without re-authentication. 
+
+## Starting the Vault agent
+
+Vault agent provides automatic authentication, which can be a great help e.g. if you use Postman or you run application
+performing a long-running process. 

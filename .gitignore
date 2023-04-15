@@ -25,3 +25,7 @@ vault/
 /docker/tls-enabled/vault-container.*
 /samples/autonomous-setup/.secret/certs.json
 /samples/autonomous-setup/.secret/unseal.json.enc
+/samples/autonomous-setup/.secret/agent_role_*
+/samples/autonomous-setup/.secret/ca.pem
+/samples/autonomous-setup/.secret/cert.*
+/samples/autonomous-setup/.secret/encryption_check.enc

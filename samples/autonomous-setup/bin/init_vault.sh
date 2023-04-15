@@ -13,6 +13,16 @@ loadIdentity
 # Make sure the script will stop when the first error will occur
 set -e
 
+echo "Checking Vault status..."
+VAULT_INIT=$(vault status -format=json | jq -r .initialized )
+if [ "$VAULT_INIT" != "false" ] ; then
+  echo "This Vault has already been initialized. Unseal it instead (if it is sealed)"
+  exit 1
+fi
+
+echo "Verifying unseal keys encryption password..."
+verifyEncryptionPassword
+
 echo "Initializing and unsealing vault..."
 vault operator init -format=json | openssl enc -a -aes-128-cbc -pass env:HCV_SEALFILE_PASS -out "$UNSEAL_FILE"
 passUnsealToken 0
@@ -41,7 +51,7 @@ vault secrets enable -path=mash-auth \
 echo "Setting up user certificate login"
 vault secrets enable pki
 vault secrets tune -max-lease-ttl=87600h pki
-vault write pki/root/generate/internal common_name="Local Vault Users" ttl=87600h
+vault write pki/root/generate/internal common_name="$LOCAL_CA_CN" ttl=87600h
 
 # Default certificate TTL is 1 week, after which it need to be rotated.
 # Only accept email from the specified domain
@@ -65,15 +75,15 @@ vault write auth/cert/certs/mashery-admin certificate=@${CA_PEM} \
   token_ttl=8h token_max_ttl=24h
 
 echo Creating operator entity and policy
-< "$DIR_PREFIX/operator_policy.hcl" vault policy write mashery-admin-policy -
+< "$POLICIES_DIR/operator_policy.hcl" vault policy write mashery-admin-policy -
 
 ENTITY_JSON=/tmp/.entity.json
 trap 'rm -rf ${ENTITY_JSON}' EXIT
-vault write /identity/entity name="Mashery Local Operator" policies=default policies=mashery-admin-policy -format=json> "${ENTITY_JSON}"
+vault write /identity/entity name="$OPERATOR_ENTITY_NAME" policies=default policies=mashery-admin-policy -format=json> "${ENTITY_JSON}"
 cat $ENTITY_JSON
 ENTITY_ID=$(jq -r .data.id "${ENTITY_JSON}")
 MOUNT_ACCESSOR_ID=$(vault auth list -format=json | jq -r '."cert/".accessor')
-vault write /identity/entity-alias name=$OPERATOR_EMAIL canonical_id="$ENTITY_ID" mount_accessor="$MOUNT_ACCESSOR_ID"
+vault write /identity/entity-alias name="$OPERATOR_EMAIL" canonical_id="$ENTITY_ID" mount_accessor="$MOUNT_ACCESSOR_ID"
 
 echo Enabling Agent login...
 vault auth enable approle

@@ -52,14 +52,14 @@ build_tls_enabled_container_amd64:
 	docker build ./docker/tls-enabled -t lspwd2/hcvault-mashery-api-auth:${VERSION} -t lspwd2/hcvault-mashery-api-auth:latest
 
 run_tls_enabled_container_amd64: build_tls_enabled_container_amd64
-	docker run --rm --cap-add=IPC_LOCK -p 8200:8200 lspwd2/hcvault-mashery-api-auth:latest
+	docker run --rm --cap-add=IPC_LOCK -p 127.0.0.1:8200:8200 lspwd2/hcvault-mashery-api-auth:latest
 
 build_tls_enabled_container_arm:
-	GOOS=darwin GOARCH=arm64 go build -o ./docker/tls-enabled/${BINARY} 						cmd/main.go
+	GOOS=linux GOARCH=arm64 go build -o ./docker/tls-enabled/${BINARY} 						cmd/main.go
 	docker build ./docker/tls-enabled -t lspwd2/hcvault-mashery-api-auth:${VERSION} -t lspwd2/hcvault-mashery-api-auth-arm:latest
 
 run_tls_enabled_container_arm: build_tls_enabled_container_arm
-	docker run --rm --cap-add=IPC_LOCK -p 8200:8200 lspwd2/hcvault-mashery-api-auth-arm:latest
+	docker run --rm --cap-add=IPC_LOCK -p 127.0.0.1:8200:8200 lspwd2/hcvault-mashery-api-auth-arm:latest
 
 release:
 	GOOS=darwin GOARCH=amd64 go build -o ./bin/${BINARY}_${VERSION}_darwin_amd64 			cmd/main.go

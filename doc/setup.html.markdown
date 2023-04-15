@@ -501,5 +501,6 @@ vault write mash-creds/config tls_pinning=custom
 ```
 
 To reset TLS pinning to default, execute
-```shellvault write mash-creds/config tls_pinning=default
+```shell
+vault write mash-creds/config tls_pinning=default
 ```

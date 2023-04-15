@@ -196,6 +196,38 @@ This script performs the following operations:
   [this page](https://developer.hashicorp.com/vault/docs/concepts/identity) for more information)
 - creates AppRole role for running and authenticating Vault agents performing automatic logins
 
+### Validating installation success
+
+To validate that Vault has been successfully initialized, perform these steps. First, login into Vault as a 
+administrator user:
+```shell
+$ ./vault_login.sh
+```
+Then, read default Mashery secret engine configuration by running:
+```shell
+$ vault read mash-auth/config/
+```
+The above command should print output analogous to the following:
+```text
+Key                        Value
+---                        -----
+enable_cli_v3_write        false
+mashery issuer cert        n/a
+mashery leaf cert          n/a
+mashery root cert          n/a
+net_latency (effective)    147ms
+oaep_label (effective)     sha256:5a91e50bd79972682215d1a50e1c39565f293f9332c617afd62a49c86750ad69
+proxy_server               n/a
+proxy_server_auth          n/a
+proxy_server_creds         n/a
+tls_pinning (desired)      default
+tls_pinning (effective)    default
+```
+
+If you see the output as above -- success! You have set up Vault, and it is ready for operation. Now you can add
+the desired roles. Refer to [API documentation](../../doc/api/roles.html.markdown) to ceate your first role as well
+as [how to import role data in pull mode](../../doc/pull_mode.html.markdown).
+
 ## Daily operations
 
 ### Unsealing

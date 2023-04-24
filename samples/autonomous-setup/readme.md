@@ -277,5 +277,53 @@ $ ./rotateUserCert.sh
 
 ## Starting the Vault agent
 
-Vault agent provides automatic authentication, which can be a great help e.g. if you use Postman or you run application
-performing a long-running process. 
+Vault agent provides automatic **limited-time** authentication and authorization to use all Mashery secrets.
+This can be a great help e.g. if you use Postman or you run application
+performing a long-running process. For security considerations, the agent is allowed to operate for 8 hours
+at a time. After this limit expires, the agent will become inoperative and will need to be re-started.
+
+The vault agent is started using `start_agent.sh` script. The script requires access to unseal keys which requires
+entering the unseal pass phrase. The unseal keys are used to generate a one-time secret identifier that Vautl agent
+will use to authenticate itself. 
+
+The agent will is listening on `localhost` and port 8100. 
+> In this guide, the agent is listening on plain-text HTTP protocol. This setting may be sufficient to get started
+> using Vault and Vault agent. Long term, however, you should obtain TLS certificate and implement these to ensure
+> that all traffic to agent is adequately encrypted. Then you should modify the `listener` stanza of the
+> `./agent/agent.hcl` file to include `tls_cert_file` and `tls_key_file` and set `tls_disable` to `false`.
+
+You can verify that the agent is running and has successful authenticated by running the following command:
+```shell
+$ curl --location 'http://localhost:8100/v1/mash-auth/config/'
+```
+which should output the default Mashery secret engine configuration, similar to the following:
+```json
+{
+    "request_id": "c0a8c273-575e-d3b0-b899-3371bfa00f69",
+    "lease_id": "",
+    "renewable": false,
+    "lease_duration": 0,
+    "data": {
+        "enable_cli_v3_write": false,
+        "mashery issuer cert": "",
+        "mashery leaf cert": "",
+        "mashery root cert": "",
+        "net_latency (effective)": "147ms",
+        "oaep_label (effective)": "sha256:68bb20104a76ece4de403ae81982d718077cf5233238cc8b103adcec6e382010",
+        "proxy_server": "",
+        "proxy_server_auth": "",
+        "proxy_server_creds": "",
+        "tls_pinning (desired)": "default",
+        "tls_pinning (effective)": "default"
+    },
+    "wrap_info": null,
+    "warnings": null,
+    "auth": null
+}
+```
+## Stopping Vault agent
+Vault agent can be sopped stopped using `stop_agent.sh` script accordingly.
+
+## What-next
+If you have followed this guide, congratulations! You have a running Vault with Mashery secrets engine within your
+Docker environment. 

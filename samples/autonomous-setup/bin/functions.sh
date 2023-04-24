@@ -13,6 +13,7 @@ initLocations() {
 
   SECRETS_DIR=${ROOT}/.secret
   POLICIES_DIR=${ROOT}/policies
+  AGENT_DIR=${ROOT}/agent
   ENC_CHECK=${SECRETS_DIR}/encryption_check.enc
 
   UNSEAL_FILE=$SECRETS_DIR/unseal.json.enc
@@ -20,7 +21,12 @@ initLocations() {
   CA_PEM=$SECRETS_DIR/ca.pem
   CERT_PEM=$SECRETS_DIR/cert.pem
   CERT_KEY=$SECRETS_DIR/cert.key
-  ROLE_ID=$SECRETS_DIR/agent_role_id
+
+
+  ROLE_ID=$AGENT_DIR/agent_role_id
+  ROLE_SECRET_ID=$AGENT_DIR/agent_secret_id
+  AGENT_CFG=$AGENT_DIR/agent.hcl
+  AGENT_PID=$AGENT_DIR/agent.pid
 }
 
 loadIdentity() {

@@ -79,7 +79,7 @@ echo Creating operator entity and policy
 
 ENTITY_JSON=/tmp/.entity.json
 trap 'rm -rf ${ENTITY_JSON}' EXIT
-vault write /identity/entity name="$OPERATOR_ENTITY_NAME" policies=default policies=mashery-admin-policy -format=json> "${ENTITY_JSON}"
+vault write /identity/entity -format=json name="$OPERATOR_ENTITY_NAME" policies=default policies=mashery-admin-policy > "${ENTITY_JSON}"
 cat $ENTITY_JSON
 ENTITY_ID=$(jq -r .data.id "${ENTITY_JSON}")
 MOUNT_ACCESSOR_ID=$(vault auth list -format=json | jq -r '."cert/".accessor')
@@ -89,4 +89,3 @@ echo Enabling Agent login...
 vault auth enable approle
 vault write auth/approle/role/mashery-vault-agent \
   token_max_ttl=8h token_policies=mashery-admin-policy
-vault read auth/approle/role/mashery-vault-agent/role-id -format=json | jq -r .data.role_id > "$ROLE_ID"

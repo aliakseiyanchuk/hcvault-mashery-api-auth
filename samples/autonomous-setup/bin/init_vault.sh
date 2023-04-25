@@ -47,6 +47,7 @@ vault secrets enable -path=mash-auth \
               -allowed-response-headers="X-Mashery-Error-Code" \
               -allowed-response-headers="X-Mashery-Responder" \
               ${MASH_AUTH_BINARY}
+vault write mash-auth/config/ tls_pinning=system
 
 echo "Setting up user certificate login"
 vault secrets enable pki

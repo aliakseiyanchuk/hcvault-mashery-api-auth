@@ -11,7 +11,7 @@ sighupAgent() {
 
     PROC_CNT=$(ps aux | grep $PID)
 
-    if [ $PROC_CNT = 0 ]; then
+    if [ $PROC_CNT != 0 ]; then
       kill -3 $PID
       sleep 2
     else

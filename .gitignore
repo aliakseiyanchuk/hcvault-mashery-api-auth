@@ -29,3 +29,7 @@ vault/
 /samples/autonomous-setup/.secret/ca.pem
 /samples/autonomous-setup/.secret/cert.*
 /samples/autonomous-setup/.secret/encryption_check.enc
+/samples/autonomous-setup/agent/agent.pid
+/samples/autonomous-setup/agent/agent_role_id
+/samples/autonomous-setup/agent/agent_secret_id
+/samples/autonomous-setup/agent/agent-*.log

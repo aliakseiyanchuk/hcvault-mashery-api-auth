@@ -78,28 +78,28 @@ verifyEncryptionPassword() {
 
 passUnsealToken() {
   UNSEAL_TOKEN=$(openssl enc -a -d -aes-128-cbc -pass env:HCV_SEALFILE_PASS -in "$UNSEAL_FILE" |
-    jq -r .unseal_keys_b64\[$1\])
+    jq -r .unseal_keys_b64\[$1\] | tr -r '\r')
 
   vault operator unseal "$UNSEAL_TOKEN"
 }
 
 passUnsealTokenToRootGeneration() {
   UNSEAL_TOKEN=$(openssl enc -a -d -aes-128-cbc -pass env:HCV_SEALFILE_PASS -in "$UNSEAL_FILE" |
-    jq -r .unseal_keys_b64\[$1\])
+    jq -r .unseal_keys_b64\[$1\] | tr -r '\r')
 
-  ENC_ROOT_TOKEN=$(vault operator generate-root -otp="$2" -nonce="$3" -format=json "$UNSEAL_TOKEN" | jq -r .encoded_root_token)
+  ENC_ROOT_TOKEN=$(vault operator generate-root -otp="$2" -nonce="$3" -format=json "$UNSEAL_TOKEN" | jq -r .encoded_root_token | tr -r '\r')
 }
 
 rootLogin() {
   ROOT_TOKEN=$(openssl enc -a -d -aes-128-cbc -pass env:HCV_SEALFILE_PASS -in "$UNSEAL_FILE" |
-    jq -r .root_token)
+    jq -r .root_token | tr -r '\r')
 
   vault login token="$ROOT_TOKEN" >/dev/null
 }
 
 generateRootToken() {
-  OTP=$(vault operator generate-root -generate-otp -format=json | jq -r .otp)
-  NONCE=$(vault operator generate-root -init -otp="$OTP" -format=json | jq -r .nonce)
+  OTP=$(vault operator generate-root -generate-otp -format=json | jq -r .otp | tr -r '\r')
+  NONCE=$(vault operator generate-root -init -otp="$OTP" -format=json | jq -r .nonce | tr -r '\r')
 
   if [ "$NONCE" = "" ]; then
     echo "No nonce returned to start the root generation."
@@ -111,7 +111,7 @@ generateRootToken() {
   passUnsealTokenToRootGeneration 1 $OTP $NONCE
   passUnsealTokenToRootGeneration 2 $OTP $NONCE
 
-  ROOT_TOKEN=$(vault operator generate-root -nonce="$NONCE" -otp="$OTP" -decode="$ENC_ROOT_TOKEN" -format=json | jq -r .token)
+  ROOT_TOKEN=$(vault operator generate-root -nonce="$NONCE" -otp="$OTP" -decode="$ENC_ROOT_TOKEN" -format=json | jq -r .token | tr -r '\r')
 }
 
 generateRootAndLogin() {

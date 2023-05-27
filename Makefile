@@ -47,6 +47,10 @@ launch_docker:
 	sudo docker-compose -f ./docker/local-no-tls/docker-compose.yaml build
 	sudo docker-compose -f ./docker/local-no-tls/docker-compose.yaml up
 
+build_base_container_amd64:
+	GOOS=linux GOARCH=amd64 go build -o ./docker/base-image/${BINARY} 						cmd/main.go
+	DOCKER_DEFAULT_PLATFORM=linux/amd64 docker build ./docker/base-image -t mash-auth-base-v${VERSION}
+
 build_tls_enabled_container_amd64:
 	GOOS=linux GOARCH=amd64 go build -o ./docker/tls-enabled/${BINARY} 						cmd/main.go
 	docker build ./docker/tls-enabled -t lspwd2/hcvault-mashery-api-auth:${VERSION} -t lspwd2/hcvault-mashery-api-auth:latest

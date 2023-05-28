@@ -105,6 +105,14 @@ func init() {
 			},
 			Required: false,
 		},
+		assumeObjectExist: {
+			Type:        framework.TypeBool,
+			Description: "Assume that target object exists and trigger update (rather than create) operation",
+			DisplayAttrs: &framework.DisplayAttributes{
+				Name: "Assume object exists",
+			},
+			Required: false,
+		},
 	}
 }
 

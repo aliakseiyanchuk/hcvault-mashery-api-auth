@@ -137,6 +137,7 @@ func pathCertConfig(b *AuthPlugin, suffix string, pinner targetCertPinningSelect
 func (b *AuthPlugin) readConfiguration(_ context.Context, _ *logical.Request, _ *framework.FieldData) (*logical.Response, error) {
 	return &logical.Response{
 		Data: map[string]interface{}{
+			"build version":                  "0.3.1",
 			oaepLabelField + " (effective)":  formatOptionalSecretValue(b.cfg.EffectiveOAEPLabel()),
 			proxyServerField:                 b.cfg.ProxyServer,
 			proxyServerAuthField:             b.cfg.ProxyServerAuth,

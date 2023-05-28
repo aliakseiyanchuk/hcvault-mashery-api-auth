@@ -1,8 +1,9 @@
 TEST?=$$(go list ./... | grep -v 'vendor')
 HOSTNAME=github.com
 NAMESPACE=aliakseiyanchuk
-VERSION=0.3
-BINARY=hcvault-mashery-api-auth_v${VERSION}
+VERSION=0.3.1
+BINARY_PREFIX=hcvault-mashery-api-auth
+BINARY=${BINARY_PREFIX}_v${VERSION}
 DEV_PLUGINS_DIR=./vault/plugins
 MASH_AUTH_DEV_BINARY=${BINARY}
 
@@ -28,6 +29,8 @@ launch_dev_mode: kill_dev_vault
               -allowed-response-headers="X-Mashery-Error-Code" \
               -allowed-response-headers="X-Mashery-Responder" \
               ${MASH_AUTH_DEV_BINARY}
+
+	vault write -address=http://localhost:8200/ mash-auth/roles/demoRole area_id=abc area_nid=10 username=user password=password api_key=apiKey secret=secret
 
 	vault policy write -address=http://localhost:8200/ agent-mcc ./samples/agent/grant_demoRole_policy.hcl
 	vault auth enable -address=http://localhost:8200/ approle

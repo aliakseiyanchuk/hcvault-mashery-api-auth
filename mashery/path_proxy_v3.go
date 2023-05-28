@@ -15,6 +15,8 @@ const (
 	ProxyMethodDelete
 )
 
+const assumeObjectExist = "assume_object_exists"
+
 const proxyModeIndicatorHeader = "X-Proxy-Mode"
 const proxyModeServerDateHeader = "X-Server-Date"
 
@@ -62,14 +64,31 @@ func pathProxyV3(b *AuthPlugin) *framework.Path {
 			},
 		},
 
-		ExistenceCheck: doesNotExist,
+		ExistenceCheck: b.proxyExistenceCheck,
 
 		HelpSynopsis:    helpSynProxyV3,
 		HelpDescription: helpDescProxyV3,
 	}
 }
 
+func (b *AuthPlugin) proxyExistenceCheck(_ context.Context, req *logical.Request, fd *framework.FieldData) (bool, error) {
+	if flg, ok := fd.GetOk(assumeObjectExist); ok {
+		rv := flg.(bool)
+		b.Logger().Trace("V3 proxy existence check: %b on explicit field request")
+		return rv, nil
+	} else if logical.UpdateOperation == req.Operation {
+		b.Logger().Trace("V3 proxy existence check is true on update-type operation")
+		return true, nil
+	} else {
+		b.Logger().Trace("V3 proxy existence check is false")
+		return false, nil
+	}
+}
+
 func (b *AuthPlugin) proxyV3Request(ctx context.Context, req *logical.Request, d *framework.FieldData, methSwitch int) (*logical.Response, error) {
+
+	b.Logger().Trace("Executing V3 proxy with method switch", "method", methSwitch)
+
 	path := "/" + d.Get(pathField).(string)
 	vals := buildQueryString(d, offsetField, limitField, selectFieldsField, filterField, sortField)
 
@@ -77,12 +96,16 @@ func (b *AuthPlugin) proxyV3Request(ctx context.Context, req *logical.Request, d
 
 	switch methSwitch {
 	case ProxyMethodGet:
+		b.Logger().Trace("Executing V3 GET proxy with")
 		fetchFunc = fetchV3Resource(path, vals)
 	case ProxyMethodPost:
+		b.Logger().Trace("Executing V3 POST proxy with")
 		fetchFunc = writeToV3Resource(path, methodPOST, req.Data)
 	case ProxyMethodPut:
+		b.Logger().Trace("Executing V3 PUT proxy with")
 		fetchFunc = writeToV3Resource(path, methodPUT, req.Data)
 	case ProxyMethodDelete:
+		b.Logger().Trace("Executing V3 DELETE proxy with")
 		fetchFunc = deleteV3Resource(path)
 	default:
 		return nil, errors.New(fmt.Sprintf("unrecognized method swtich: %d", methSwitch))

@@ -104,11 +104,14 @@ type APIResponseContext[T any] interface {
 	RoleContext
 	GetResponse() T
 	CarryAPIResponse(t T)
+	GetMethod() string
+	CarryMethod(t string)
 }
 
 type APIResponseContainer[T any] struct {
 	RoleContainer
 	response T
+	method   string
 }
 
 func (arc *APIResponseContainer[T]) GetResponse() T {
@@ -117,6 +120,14 @@ func (arc *APIResponseContainer[T]) GetResponse() T {
 
 func (arc *APIResponseContainer[T]) CarryAPIResponse(t T) {
 	arc.response = t
+}
+
+func (arc *APIResponseContainer[T]) GetMethod() string {
+	return arc.method
+}
+
+func (arc *APIResponseContainer[T]) CarryMethod(t string) {
+	arc.method = t
 }
 
 type WildcardAPIResponseContext APIResponseContext[*transport.WrappedResponse]

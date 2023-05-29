@@ -251,6 +251,7 @@ func makeNew(conf *logical.BackendConfig) (*AuthPlugin, error) {
 
 			pathProxyV2(&retVal),
 			pathProxyV3(&retVal),
+			pathProxyV3WithExplicitMethod(&retVal),
 		},
 		Secrets: []*framework.Secret{
 			v2AccessSecret(),

@@ -27,7 +27,7 @@ The _proxy mode_ solves several security and functional issues:
 2. The _proxy mode_ manages access token rotation automatically. A long-running application has to include the logic to
    request token renewal shortly before the access token expiry. Practice shows that developers may struggle with making
    the mechanism effective.
-3. In _proxy mode_, the requests to the Mashery API will be smoothed to fit within the indicated QPS values. This
+3. In _proxy mode_, the requests to the Mashery API will be throttled to fit within the indicated QPS values. This
    simplifies the application's code that does not need to manage concurrency itself.
 
 > The _proxy mode_ is originally developed to support [Terraform Mashery provider](https://github.com/aliakseiyanchuk/mashery-terraform-provider).
@@ -49,11 +49,69 @@ method.
 
 Consult the [API page](api.html.markdown) for the Vault paths this secret engine supports.
 
-## Limitations
+## Setup required for POST and PUT methods
 
-The _proxy mode_ is **not** suitable for applications that need to use fetch a complete list of Mashery collections and,
-thus, these require `X-Total-Count` header to be present in the list responses. More information can be found in
-the [limitations page](limitations.html.markdown).
+Vault handles POST and PUT methods for secret engines to implement `vault write` operation, where both these verbs
+are interpreted by the Vault binary before being passed onto the secret engine. The effect of it is that POST and PUT
+methods will be at time confused. A reliable working of the plugin in the proxy mode requires either implementing
+a URL path rewrite before vault, or client adding the desired URL method hint.
+
+### URL Path Rewrite
+
+If you run a Vault e.g. behind a proxy performing TLS termination, then path rewrite will achieve a fully transparent
+solution. The requirement is to rewrite a path
+- from `/v1/<mount-point>/roles/<roleName>/proxy/v3/<path>`
+- to `/v1/<mount-point>/roles/<roleName>/proxy/v3-method/<http method>/<path>`
+
+This configuration embeds the HTTP verb sent by the client in the URL path handled by the secret engine without requiring
+the changes to the client.
+
+For example, if the Vault is running behind NGINX server, then the following rewrite rule needs to be added
+```text
+    location ~ /v1/mash-auth/roles/.*/proxy/v3/.* {
+       rewrite ^/v1/mash-auth/roles/(.*)/proxy/v3/(.*)$ /v1/mash-auth/roles/$1/proxy/v3-method/$request_method/$2        last;
+      }
+```
+Teh configuration snippet below shows a complete NGINX server configuration:
+```text
+server {
+
+    listen 8200 ssl;
+    server_name <your-server-name>;
+
+    ssl_certificate     /etc/ssl/ssl.bundle.crt;
+    ssl_certificate_key /etc/ssl/ssl.key;
+
+    location / {
+
+      proxy_set_header        Host $host:$server_port;
+      proxy_set_header        X-Real-IP $remote_addr;
+      proxy_set_header        X-Forwarded-For $proxy_add_x_forwarded_for;
+      proxy_set_header        X-Forwarded-Proto $scheme;
+
+      # Fix the "It appears that your reverse proxy set up is broken" error.
+      proxy_pass          http://vault_upstream;
+      proxy_read_timeout  90;
+
+      proxy_redirect      http://vault_upstream:8200 http://<vault external dns name>:8200;
+
+      # Required for new HTTP-based CLI
+      proxy_http_version 1.1;
+      proxy_request_buffering off;
+
+
+      location ~ /v1/mash-auth/roles/.*/proxy/v3/.* {
+       rewrite ^/v1/mash-auth/roles/(.*)/proxy/v3/(.*)$ /v1/mash-auth/roles/$1/proxy/v3-method/$request_method/$2        last;
+      }
+    }
+  }
+```
+### Appending Suffix to disambiguating POST and PUT
+
+If your vault server is directly attached to the network, then the calling client needs to disambiguate `PUT`-type
+operations. This is achieved by appending `;target-method-put` suffix at the end of the URL requested.
+
+> 
 
 ## Mashery endpoint configuration changes
 

@@ -105,11 +105,11 @@ func init() {
 			},
 			Required: false,
 		},
-		assumeObjectExist: {
-			Type:        framework.TypeBool,
-			Description: "Assume that target object exists and trigger update (rather than create) operation",
+		targetMethod: {
+			Type:        framework.TypeString,
+			Description: "Method (post or put) to use when calling mashery APIs",
 			DisplayAttrs: &framework.DisplayAttributes{
-				Name: "Assume object exists",
+				Name: "Target method",
 			},
 			Required: false,
 		},
@@ -173,8 +173,8 @@ func (b *AuthPlugin) v3ObjectExists(ctx context.Context, req *logical.Request, d
 	}
 
 	mr.Append(
-		ensureAccessTokenValid,
-		fetchV3Resource(path, nil),
+		b.ensureAccessTokenValid,
+		b.fetchV3Resource(path, nil),
 		bounceErrorCodes,
 	)
 
@@ -198,9 +198,9 @@ func (b *AuthPlugin) executeV3Write(ctx context.Context, req *logical.Request, d
 		return nil, errors.New("you need to post a JSON object on this path")
 	}
 
-	sr := makeBaseV3InvocationChain()
+	sr := b.makeBaseV3InvocationChain()
 	sr.Append(
-		writeToV3Resource(path, meth, postObj),
+		b.writeToV3Resource(path, meth, postObj),
 		bounceErrorCodes,
 		renderV3SingleObjectResponse,
 	)
@@ -211,9 +211,9 @@ func (b *AuthPlugin) executeV3Write(ctx context.Context, req *logical.Request, d
 func (b *AuthPlugin) executeV3Delete(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	path := "/" + d.Get(pathField).(string)
 
-	sr := makeBaseV3InvocationChain()
+	sr := b.makeBaseV3InvocationChain()
 	sr.Append(
-		deleteV3Resource(path),
+		b.deleteV3Resource(path),
 		bounceErrorCodes,
 		renderV3ResponseToEmpty,
 	)
@@ -237,9 +237,9 @@ func (b *AuthPlugin) executeV3Get(ctx context.Context, req *logical.Request, d *
 		renderingFunc = renderV3ObjectCountResponse
 	}
 
-	sr := makeBaseV3InvocationChain()
+	sr := b.makeBaseV3InvocationChain()
 	sr.Append(
-		fetchV3Resource(path, vals),
+		b.fetchV3Resource(path, vals),
 		bounceErrorCodes,
 		renderingFunc,
 	)
@@ -247,13 +247,13 @@ func (b *AuthPlugin) executeV3Get(ctx context.Context, req *logical.Request, d *
 	return handleWildcardAPIRoleBoundOperation(ctx, b, req, d, sr.Run)
 }
 
-func makeBaseV3InvocationChain() SimpleRunner[WildcardAPIResponseContext] {
+func (b *AuthPlugin) makeBaseV3InvocationChain() SimpleRunner[WildcardAPIResponseContext] {
 	rv := SimpleRunner[WildcardAPIResponseContext]{}
 	rv.Append(
 		readRole[WildcardAPIResponseContext](true),
 		blockUsageExceedingLimits[WildcardAPIResponseContext],
 		allowOnlyV3CapableRole[WildcardAPIResponseContext],
-		ensureAccessTokenValid,
+		b.ensureAccessTokenValid,
 		decreaseRemainingUsageQuota[WildcardAPIResponseContext],
 	)
 
@@ -268,9 +268,9 @@ func (b *AuthPlugin) executeV3List(ctx context.Context, req *logical.Request, d 
 	}
 	vals := buildQueryString(d, offsetField, limitField, selectFieldsField, filterField, sortField)
 
-	sr := makeBaseV3InvocationChain()
+	sr := b.makeBaseV3InvocationChain()
 	sr.Append(
-		fetchV3Resource(path, vals),
+		b.fetchV3Resource(path, vals),
 		bounceErrorCodes,
 		renderV3ListResponse,
 	)

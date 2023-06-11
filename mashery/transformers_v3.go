@@ -93,19 +93,18 @@ func bounceErrorCodes(_ context.Context, reqCtx *RequestHandlerContext[WildcardA
 	}
 
 	if resp.StatusCode == 403 {
-		return logical.ErrorResponse("access to this resource is denied by Mashery",
-			"raw body", string(bodyStr),
-			"outbound method", reqCtx.heap.GetMethod(),
+		return logical.ErrorResponse("access to this resource is denied by Mashery (original body: '%s' returned for method %s)",
+			string(bodyStr),
+			reqCtx.heap.GetMethod(),
 		), nil
 	} else if resp.StatusCode == 404 {
-		return logical.ErrorResponse("requested object is not found in Mashery",
-			"raw body", string(bodyStr),
-			"outbound method", reqCtx.heap.GetMethod(),
+		return logical.ErrorResponse("requested object is not found in Mashery (original body: '%s' returned for method %s)",
+			string(bodyStr),
+			reqCtx.heap.GetMethod(),
 		), nil
 	} else if resp.StatusCode > 299 {
-		return logical.ErrorResponse("unsupported status code",
-			"status code", resp.StatusCode, "body", string(bodyStr),
-			"outbound method", reqCtx.heap.GetMethod(),
+		return logical.ErrorResponse("unsupported status code %d (original body: '%s' returned for method %s)",
+			resp.StatusCode, string(bodyStr), reqCtx.heap.GetMethod(),
 		), nil
 	}
 
@@ -333,10 +332,8 @@ func (b *AuthPlugin) ensureAccessTokenValid(ctx context.Context, reqCtx *Request
 			b.Logger().Error(fmt.Sprintf("attempt to renew token for role %s failed: %s", reqCtx.heap.GetRole().Name, err.Error()))
 			return nil, err
 		} else {
-			role.Usage.V3Token = tkn.AccessToken
-			role.Usage.V3TokenExpiry = tkn.ExpiryTime().Unix()
-
-			b.Logger().Error(fmt.Sprintf("successfully renewed token for role %s", reqCtx.heap.GetRole().Name))
+			role.Usage.ReplaceAccessToken(tkn.AccessToken, tkn.ExpiryTime().Unix())
+			b.Logger().Info(fmt.Sprintf("successfully renewed token for role %s", reqCtx.heap.GetRole().Name))
 
 			if writeErr := reqCtx.WritePath(ctx, roleUsagePath(reqCtx), &role.Usage); writeErr != nil {
 				b.Logger().Error(fmt.Sprintf("failed to persist acquired token for role %s: %s", reqCtx.heap.GetRole().Name, writeErr.Error()))

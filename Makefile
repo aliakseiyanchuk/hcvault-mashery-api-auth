@@ -53,7 +53,7 @@ launch_docker:
 build_base_container_amd64:
 	GOOS=linux GOARCH=amd64 go build -o ./docker/base-image/${BINARY} 						cmd/main.go
 	openssl dgst -sha256 ./docker/base-image/${BINARY} > ./docker/base-image/${BINARY}.sha256
-	DOCKER_DEFAULT_PLATFORM=linux/amd64 docker build ./docker/base-image -t mash-auth-base-v${VERSION}
+	DOCKER_DEFAULT_PLATFORM=linux/amd64 docker build --progress=plain ./docker/base-image -t mash-auth-base-v${VERSION}
 
 build_tls_enabled_container_amd64:
 	GOOS=linux GOARCH=amd64 go build -o ./docker/tls-enabled/${BINARY} 						cmd/main.go

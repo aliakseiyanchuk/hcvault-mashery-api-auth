@@ -173,7 +173,7 @@ func (b *AuthPlugin) proxyV3Request(ctx context.Context, req *logical.Request, d
 	sr := b.makeBaseV3InvocationChain()
 	sr.Append(
 		fetchFunc,
-		bounceErrorCodes,
+		// No error bouncing in proxy mode as the vault is performing only the authentication.
 		renderV3ProxiedResponse,
 	)
 

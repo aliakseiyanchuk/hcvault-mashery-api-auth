@@ -163,6 +163,12 @@ type StoredRoleUsage struct {
 	ExplicitTerm     int64  `json:"etm,omitempty"`
 }
 
+// ReplaceAccessToken replace access token and expiry time used in this struct.
+func (sru *StoredRoleUsage) ReplaceAccessToken(tkn string, expiry int64) {
+	sru.V3Token = tkn
+	sru.V3TokenExpiry = expiry
+}
+
 // StoredRole Authentication role data that is stored within Vault encrypted storage
 type StoredRole struct {
 	Keys       RoleKeys

@@ -19,7 +19,7 @@ fi
 set -e
 
 echo "Checking Vault status..."
-VAULT_INIT=$(vault status -format=json | jq -r .initialized )
+VAULT_INIT=$(vault status -format=json | jq -r .initialized | tr -d '\r')
 if [ "$VAULT_INIT" != "false" ] ; then
   echo "This Vault has already been initialized. Unseal it instead (if it is sealed)"
   exit 1
@@ -52,6 +52,7 @@ vault secrets enable -path=mash-auth \
               -allowed-response-headers="X-Mashery-Error-Code" \
               -allowed-response-headers="X-Mashery-Responder" \
               ${MASH_AUTH_BINARY}
+vault write mash-auth/config/ tls_pinning=system
 
 echo "Setting up user certificate login"
 vault secrets enable pki
@@ -82,12 +83,12 @@ vault write auth/cert/certs/mashery-admin certificate=@${CA_PEM} \
 echo Creating operator entity and policy
 < "$POLICIES_DIR/operator_policy.hcl" vault policy write mashery-admin-policy -
 
-ENTITY_JSON=/tmp/.entity.json
+ENTITY_JSON=.tmp_entity.json
 trap 'rm -rf ${ENTITY_JSON}' EXIT
 vault write /identity/entity -format=json name="$OPERATOR_ENTITY_NAME" policies=default policies=mashery-admin-policy > "${ENTITY_JSON}"
 cat $ENTITY_JSON
-ENTITY_ID=$(jq -r .data.id "${ENTITY_JSON}")
-MOUNT_ACCESSOR_ID=$(vault auth list -format=json | jq -r '."cert/".accessor')
+ENTITY_ID=$(jq -r .data.id "${ENTITY_JSON}" | tr -d '\r' )
+MOUNT_ACCESSOR_ID=$(vault auth list -format=json | jq -r '."cert/".accessor' | tr -d '\r' )
 vault write /identity/entity-alias name="$OPERATOR_EMAIL" canonical_id="$ENTITY_ID" mount_accessor="$MOUNT_ACCESSOR_ID"
 
 echo Enabling Agent login...

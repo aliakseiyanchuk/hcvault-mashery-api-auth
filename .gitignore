@@ -34,3 +34,6 @@ vault/
 /docker/tls-enabled/hcvault-mashery-api-auth_v*
 /docker/tls-enabled/vault-container.*
 
+/docker/tls-enabled/dist/
+/samples/autonomous-setup/agent/agent_role_id
+/samples/autonomous-setup/agent/agent-*.log

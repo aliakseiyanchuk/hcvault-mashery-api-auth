@@ -3,9 +3,11 @@ HOSTNAME=github.com
 NAMESPACE=aliakseiyanchuk
 VERSION=0.3.1
 BINARY_PREFIX=hcvault-mashery-api-auth
+DOCKER_IMAGE=lspwd2/${BINARY_PREFIX}
 BINARY=${BINARY_PREFIX}_v${VERSION}
 DEV_PLUGINS_DIR=./vault/plugins
 MASH_AUTH_DEV_BINARY=${BINARY}
+MULTIPLATFORMS=linux/amd64,linux/arm64,linux/arm/v6,linux/386
 
 default: install
 
@@ -55,22 +57,6 @@ build_base_container_amd64:
 	openssl dgst -sha256 ./docker/base-image/${BINARY} > ./docker/base-image/${BINARY}.sha256
 	DOCKER_DEFAULT_PLATFORM=linux/amd64 docker build --progress=plain ./docker/base-image -t mash-auth-base-v${VERSION}
 
-build_tls_enabled_container_amd64:
-	GOOS=linux GOARCH=amd64 go build -o ./docker/tls-enabled/${BINARY} 						cmd/main.go
-	openssl dgst -sha256 ./docker/base-image/${BINARY} > ./docker/base-image/${BINARY}.sha256
-	docker build ./docker/tls-enabled -t lspwd2/hcvault-mashery-api-auth:${VERSION} -t lspwd2/hcvault-mashery-api-auth:latest
-
-run_tls_enabled_container_amd64: build_tls_enabled_container_amd64
-	docker run --rm --cap-add=IPC_LOCK -p 127.0.0.1:8200:8200 lspwd2/hcvault-mashery-api-auth:latest
-
-build_tls_enabled_container_arm:
-	GOOS=linux GOARCH=arm64 go build -o ./docker/tls-enabled/${BINARY} 						cmd/main.go
-	openssl dgst -sha256 ./docker/base-image/${BINARY} > ./docker/base-image/${BINARY}.sha256
-	docker build ./docker/tls-enabled -t lspwd2/hcvault-mashery-api-auth:${VERSION} -t lspwd2/hcvault-mashery-api-auth-arm:latest
-
-run_tls_enabled_container_arm: build_tls_enabled_container_arm
-	docker run --rm --cap-add=IPC_LOCK -p 127.0.0.1:8200:8200 lspwd2/hcvault-mashery-api-auth-arm:latest
-
 release:
 	GOOS=darwin GOARCH=amd64 go build -o ./bin/${BINARY}_${VERSION}_darwin_amd64 			cmd/main.go
 	GOOS=freebsd GOARCH=386 go build -o ./bin/${BINARY}_${VERSION}_freebsd_386 				cmd/main.go
@@ -101,3 +87,36 @@ vendor:
 	go mod tidy
 	go mod vendor
 
+
+create_multiplatform_builder:
+	docker buildx create --name mpbuilder --driver docker-container --bootstrap
+	docker buildx use mpbuilder
+
+compile_tls_container_binaries:
+	mkdir -p ./docker/tls-enabled/dist/linux/amd64
+	mkdir -p ./docker/tls-enabled/dist/linux/arm64
+	mkdir -p ./docker/tls-enabled/dist/linux/arm/v6
+	mkdir -p ./docker/tls-enabled/dist/linux/386
+	find ./docker/tls-enabled/dist -name ${BINARY_PREFIX}* -exec /bin/rm {} \;
+	GOOS=linux GOARCH=arm64 		go build -o ./docker/tls-enabled/dist/linux/arm64/${BINARY} 	cmd/main.go
+	openssl dgst -sha256 ./docker/tls-enabled/dist/linux/arm64/${BINARY} > ./docker/tls-enabled/dist/linux/arm64/${BINARY}.sha256
+
+	GOOS=linux GOARCH=arm GOARM=6 	go build -o ./docker/tls-enabled/dist/linux/arm/v6/${BINARY} 	cmd/main.go
+	openssl dgst -sha256 ./docker/tls-enabled/dist/linux/arm/v6/${BINARY} > ./docker/tls-enabled/dist/linux/arm/v6/${BINARY}.sha256
+
+	GOOS=linux GOARCH=amd64 go build -o ./docker/tls-enabled/dist/linux/amd64/${BINARY} cmd/main.go
+	openssl dgst -sha256 ./docker/tls-enabled/dist/linux/amd64/${BINARY} > ./docker/tls-enabled/dist/linux/amd64/${BINARY}.sha256
+
+	GOOS=linux GOARCH=386 			go build -o ./docker/tls-enabled/dist/linux/386/${BINARY}		cmd/main.go
+	openssl dgst -sha256 ./docker/tls-enabled/dist/linux/386/${BINARY} > ./docker/tls-enabled/dist/linux/386/${BINARY}.sha256
+
+
+create_tls_enabled_container: compile_tls_container_binaries
+	docker buildx build \
+		--build-arg BINARY=${BINARY} \
+		--platform ${MULTIPLATFORMS}  \
+		-t ${DOCKER_IMAGE}:${VERSION} -t ${DOCKER_IMAGE}:latest \
+		./docker/tls-enabled
+
+run_tls_enabled_container: create_tls_enabled_container
+	docker run --rm --cap-add=IPC_LOCK -p 127.0.0.1:8200:8200 ${DOCKER_IMAGE}:latest

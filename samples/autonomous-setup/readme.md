@@ -1,4 +1,4 @@
-# Creating autonomous Vault installation
+# Setting up Mashery API Auth plugin for autonomous operation
 
 This quick guide is for Mashery administrator and/or operators looking to get started with Mashery V2/V3 Access
 Credentials Secrets Engine using a Docker container setup. The main benefit of Docker is that is provides a low-effort,
@@ -134,10 +134,6 @@ to the command line.
 
 ```shell
 docker run --cap-add=IPC_LOCK -p 127.0.0.1:8200:8200 lspwd2/hcvault-mashery-api-auth:latest
-```
-Apple machines running M1 and M2 chips should use arm version:
-```shell
-docker run --cap-add=IPC_LOCK -p 127.0.0.1:8200:8200 lspwd2/hcvault-mashery-api-auth-arm:latest
 ```
 
 ## First-time setup

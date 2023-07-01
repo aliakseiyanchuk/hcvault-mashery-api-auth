@@ -8,7 +8,12 @@ verifyPreconditions
 initLocations "$DIR_PREFIX"
 loadIdentity
 
-. $DIR_PREFIX/pluginInfo.sh || exit 1
+deriveBinaryVersionFromContainer
+
+if [ "" = "$MASH_AUTH_BINARY" ] || [ "" = "$MASH_AUTH_BINARY_SHA" ] ; then
+  echo "Cannot establish plugin binary name and sha256 signature. Is the container running?"
+  exit 1
+fi
 
 # Make sure the script will stop when the first error will occur
 set -e

@@ -1,4 +1,4 @@
-FROM vault:latest
+FROM hashicorp/vault:latest
 
 # You may want to budnle additional resources, such as SSL certificates
 COPY config.hcl /vault/config

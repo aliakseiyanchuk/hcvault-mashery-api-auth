@@ -1,4 +1,4 @@
-FROM vault:latest
+FROM hashicorp/vault:latest
 
 RUN mkdir -p /vault/plugins
 COPY ./hcvault-mashery-api-auth_v* /vault/plugins

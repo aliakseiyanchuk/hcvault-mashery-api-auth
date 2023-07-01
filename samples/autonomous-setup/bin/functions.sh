@@ -147,3 +147,15 @@ checkUserCertExpiry() {
     fi
   fi
 }
+
+deriveBinaryVersionFromContainer() {
+  CONTAINER_ID=$(docker container ls --format '{{ .ID }}' --filter ancestor=lspwd2/hcvault-mashery-api-auth:latest)
+  MASH_AUTH_BINARY=$(docker exec $CONTAINER_ID /bin/ls '/vault/plugins/' | head -n 1)
+  MASH_AUTH_SIG=$(docker exec $CONTAINER_ID cat /home/vault/${MASH_AUTH_BINARY}.sha256)
+
+  if [ "" = "${MASH_AUTH_BINARY_SHA}" ] ; then
+    MASH_AUTH_SIG=$(docker exec $CONTAINER_ID cat /root/${MASH_AUTH_BINARY}.sha256 | head -n 1)
+  fi
+
+  MASH_AUTH_BINARY_SHA=$(echo $MASH_AUTH_SIG | awk -F= '{print $2}' | awk '{print $1}')
+}

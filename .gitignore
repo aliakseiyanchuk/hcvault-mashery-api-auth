@@ -21,8 +21,6 @@ vault/
 /test/role-id.txt
 /test/secret-id.txt
 /.secrets/
-/docker/tls-enabled/hcvault-mashery-api-auth_v*
-/docker/tls-enabled/vault-container.*
 /samples/autonomous-setup/.secret/certs.json
 /samples/autonomous-setup/.secret/unseal.json.enc
 /samples/autonomous-setup/.secret/agent_role_*
@@ -35,11 +33,7 @@ vault/
 /samples/autonomous-setup/agent/agent-*.log
 
 # Excluded docker build temporary files
-/docker/base-image/hcvault-mashery-api-auth_v*
-/docker/local-no-tls/hcvault-mashery-api-auth_v*
-/docker/tls-enabled/hcvault-mashery-api-auth_v*
+/docker/*/hcvault-mashery-api-auth_v*
 /docker/tls-enabled/vault-container.*
 
 /docker/tls-enabled/dist/
-/samples/autonomous-setup/agent/agent_role_id
-/samples/autonomous-setup/agent/agent-*.log

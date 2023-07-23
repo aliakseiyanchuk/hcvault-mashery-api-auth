@@ -9,9 +9,9 @@ sighupAgent() {
   if [ -f "$AGENT_PID" ]; then
     PID=$(cat "$AGENT_PID")
 
-    PROC_CNT=$(ps aux | grep $PID)
+    PROC_CNT=$(ps aux | grep $PID | wc -l)
 
-    if [ $PROC_CNT != 0 ]; then
+    if [ $PROC_CNT != 0 ] ; then
       kill -3 $PID
       sleep 2
     else
@@ -48,5 +48,5 @@ esac
 
 NUM_REMAINING=$(ps aux | grep vault | grep agent | wc -l)
 if [ $NUM_REMAINING -gt 0 ]; then
-  echo: "Warning: Vault agent didn't exit gracefully. You need to shut it down manually"
+  echo "Warning: Vault agent didn't exit gracefully. You need to shut it down manually"
 fi

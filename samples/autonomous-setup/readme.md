@@ -7,7 +7,7 @@ just-in-time access to the Mashery sensitive keys on the operator's device.
 To set up Vault in the docker container, you would need:
 
 - Basic knowledge of running shell scripts.
-- A terminal capable of interpreting shell scripts. Windows-based hosts can 
+- A terminal capable of interpreting shell scripts. Windows-based hosts can either run WSL or Cygin
 - Latest HashiCorp vault [installed on your machine](https://developer.hashicorp.com/vault/docs/install) (so
   that `vault` command is accessible in the terminal)
 - `jq` command
@@ -84,6 +84,21 @@ lZIxWbWGIJ/F8S8XyV1ZprSSz+jk/nYliLsA8Pf2JqGAfbQCORn81B/z0wVSLX6N6fkg0QQA04fY
 qDlC+KxJP/QN
 -----END CERTIFICATE-----
 ```
+## Running Vault container behind NGINX
+If you are planning to use your Mashery keys also do deploy Mashery APIs with Mashery terraform provider,
+you *need* to run the Vault container behind NGINX that will perform necessary HTTP rewrites. The following
+drawing illustrates the required deployment topology
+![nginx topology](nginx-topo.png)
+
+This topology requires:
+- a bridging network (capable of routing connections from the host to the Internet)
+- Vault container connected to the bridging network;
+- nginx container that will be actually performing TLS termination and rewrite.
+
+The compose file is found in the `mashauth-behind-nginx` directory. The source code does *not* contain
+TLS certificate this connection should use. As a deployer, you need to provide `nginx.crt` 
+and `nginx.key` files in the `mashauth-behind-nginx/nginx` directory. This is the certificate that nginx will
+present to the `vault` client application, and which vault (and your system) should trust.
 
 ## Prepare the terminal session
 
@@ -134,6 +149,14 @@ to the command line.
 
 ```shell
 docker run --cap-add=IPC_LOCK -p 127.0.0.1:8200:8200 lspwd2/hcvault-mashery-api-auth:latest
+```
+
+If you run Vault behind nginx proxy using the supplied compose file, you need to build local image and
+run it as follows:
+```shell
+cd machauth-behind-nginx
+docker compose build
+docker compose up -d 
 ```
 
 ## First-time setup
@@ -240,8 +263,14 @@ The init script has configured a certificate-based login into vault. Run this sc
 ```shell
 $ ./vault_login.sh
 ```
+> If you have deployed Vault behind nginx, then this method will not work due to TLS termination performed
+> at NGINX Instead use AppRole method to generate the token:
+> ```shell
+> ./vault_approle_login.sh
+> ```
+
 This command will create an access token to Vault that will be valid for 8 hours. After this time, the token will
-expire. The remaining lifetime of the token can be obtianed by running the command
+expire. The remaining lifetime of the token can be obtained by running the command
 ```shell
 $ vault token lookup
 ```
@@ -253,8 +282,10 @@ You can renew the token any time by running the `vault_login.sh` script again.
 > 
 > Although the access token is relatively short-lived, it is nevertheless a good habit to logout from Vault after
 > you are done with the operation at hand. With Vault, logging out is achieved by revoking the Vault access token
-> by running the `vault token revoke -self` command.
-
+> by running the following command: 
+> ```shell
+> vault token revoke -self`
+> ``` 
 
 ### Interacting with Mashery Authentication plugin
 

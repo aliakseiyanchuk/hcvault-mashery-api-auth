@@ -31,6 +31,7 @@ vault/
 /samples/autonomous-setup/agent/agent_role_id
 /samples/autonomous-setup/agent/agent_secret_id
 /samples/autonomous-setup/agent/agent-*.log
+/samples/autonomous-setup/mashauth-behind-nginx/nginx/nginx.*
 
 # Excluded docker build temporary files
 /docker/*/hcvault-mashery-api-auth_v*

@@ -13,4 +13,5 @@ if [ "$USER_CERT_EXPIRED" != "" ] ; then
   exit 1
 fi
 
+set -x
 vault login -method=cert -client-cert=${CERT_PEM} -client-key=${CERT_KEY} name=mashery-admin

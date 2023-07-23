@@ -94,4 +94,4 @@ vault write /identity/entity-alias name="$OPERATOR_EMAIL" canonical_id="$ENTITY_
 echo Enabling Agent login...
 vault auth enable approle
 vault write auth/approle/role/mashery-vault-agent \
-  token_max_ttl=8h token_policies=mashery-admin-policy
+  token_max_ttl=8h token_policies=mashery-admin-policy token_policies=default

@@ -17,4 +17,4 @@ SECRET_ID=$(vault write auth/approle/role/mashery-vault-agent/secret-id secret_i
 vault write auth/approle/login \
     role_id=$ROLE_ID \
     secret_id=$SECRET_ID \
-    -format=json | jq -r .auth.client_token | vault login -
+    -format=json | jq -r .auth.client_token

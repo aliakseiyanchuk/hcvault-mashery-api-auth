@@ -153,7 +153,7 @@ deriveBinaryVersionFromContainer() {
   MASH_AUTH_BINARY=$(docker exec $CONTAINER_ID /bin/ls '/vault/plugins/' | head -n 1)
   MASH_AUTH_SIG=$(docker exec $CONTAINER_ID cat /home/vault/${MASH_AUTH_BINARY}.sha256)
 
-  if [ "" = "${MASH_AUTH_BINARY_SHA}" ] ; then
+  if [ "" = "${MASH_AUTH_SIG}" ] ; then
     MASH_AUTH_SIG=$(docker exec $CONTAINER_ID cat /root/${MASH_AUTH_BINARY}.sha256 | head -n 1)
   fi
 

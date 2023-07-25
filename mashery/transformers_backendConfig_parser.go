@@ -48,9 +48,9 @@ func parseBackEndConfigurationFunc(_ context.Context, reqCtx *RequestHandlerCont
 
 	if v, ok := d.GetOk(proxyServerField); ok {
 		cfgStr := v.(string)
-		if url, err := url.Parse(cfgStr); err != nil {
+		if proxySrv, err := url.Parse(cfgStr); err != nil {
 			parseErrors = append(parseErrors, errwrap.Wrapf("illegal value for proxy URL: {{err}}", err))
-		} else if len(url.Hostname()) == 0 {
+		} else if len(proxySrv.Hostname()) == 0 {
 			parseErrors = append(parseErrors, errors.New("proxy server URL does not contain a host name"))
 		} else {
 			be.ProxyServer = cfgStr
@@ -58,6 +58,7 @@ func parseBackEndConfigurationFunc(_ context.Context, reqCtx *RequestHandlerCont
 	}
 	copyStringFieldIfDefined(d, proxyServerAuthField, &be.ProxyServerAuth)
 	copyStringFieldIfDefined(d, proxyServerCredsField, &be.ProxyServerCreds)
+	copyStringFieldIfDefined(d, rootCAField, &be.TLSCerts)
 
 	if v, ok := d.GetOk(tlsPinningField); ok {
 		switch strings.ToLower(v.(string)) {
@@ -69,6 +70,9 @@ func parseBackEndConfigurationFunc(_ context.Context, reqCtx *RequestHandlerCont
 			break
 		case tlsPinningCustomOpt:
 			be.TLSPinning = TLSPinningCustom
+			break
+		case tlsPinningInsecureOpt:
+			be.TLSPinning = TLSPinningInsecure
 			break
 		default:
 			parseErrors = append(parseErrors, errors.New(fmt.Sprintf("unsupported tls pinning: %s", v)))

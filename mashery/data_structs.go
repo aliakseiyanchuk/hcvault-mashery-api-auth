@@ -3,6 +3,7 @@ package mashery
 import (
 	"context"
 	"crypto/tls"
+	"crypto/x509"
 	"github.com/aliakseiyanchuk/mashery-v3-go-client/transport"
 	"github.com/aliakseiyanchuk/mashery-v3-go-client/v3client"
 	"github.com/hashicorp/vault/sdk/framework"
@@ -34,6 +35,7 @@ const (
 	TLSPinningDefault = iota
 	TLSPinningSystem
 	TLSPinningCustom
+	TLSPinningInsecure
 )
 
 type BackendConfiguration struct {
@@ -41,6 +43,8 @@ type BackendConfiguration struct {
 	ProxyServer      string `json:"_proxy_s"`
 	ProxyServerAuth  string `json:"_proxy_t"`
 	ProxyServerCreds string `json:"_proxy_c"`
+
+	TLSCerts string `json:"_tls_certs"`
 
 	CLIWriteEnabled bool `json:"_cli_rw"`
 
@@ -97,10 +101,31 @@ func (bc *BackendConfiguration) EffectiveTLSPinning() int {
 	return bc.TLSPinning
 }
 
-func (bc *BackendConfiguration) EffectiveTLSConfiguration() *tls.Config {
+func (bc *BackendConfiguration) decorateRootCACerts(config *tls.Config) *tls.Config {
+	if len(bc.TLSCerts) == 0 || "-" == bc.TLSCerts {
+		return config
+	}
+
+	rv := config
+	if rv == nil {
+		rv = &tls.Config{}
+	}
+
+	pool := x509.NewCertPool()
+	pool.AppendCertsFromPEM([]byte(bc.TLSCerts))
+
+	rv.RootCAs = pool
+
+	return rv
+}
+func (bc *BackendConfiguration) decorateCertificatePinning() *tls.Config {
 	switch bc.EffectiveTLSPinning() {
 	case TLSPinningDefault:
 		return transport.DefaultTLSConfig()
+	case TLSPinningInsecure:
+		return &tls.Config{
+			InsecureSkipVerify: true,
+		}
 	case TLSPinningSystem:
 		return nil
 	case TLSPinningCustom:
@@ -120,6 +145,13 @@ func (bc *BackendConfiguration) EffectiveTLSConfiguration() *tls.Config {
 	default:
 		return transport.DefaultTLSConfig()
 	}
+}
+
+func (bc *BackendConfiguration) EffectiveTLSConfiguration() *tls.Config {
+	rv := bc.decorateCertificatePinning()
+	rv = bc.decorateRootCACerts(rv)
+
+	return rv
 }
 
 // RoleKeys Keys of Mashery authentication role.

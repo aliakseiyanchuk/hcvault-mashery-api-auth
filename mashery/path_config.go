@@ -17,13 +17,15 @@ const (
 	netLatencyField       = "net_latency"
 	tlsPinningField       = "tls_pinning"
 
-	tlsPinningDefaultOpt = "default"
-	tlsPinningSystemOpt  = "system"
-	tlsPinningCustomOpt  = "custom"
+	tlsPinningDefaultOpt  = "default"
+	tlsPinningSystemOpt   = "system"
+	tlsPinningCustomOpt   = "custom"
+	tlsPinningInsecureOpt = "insecure"
 
 	certCommonNameField   = "cn"
 	certSerialNumberField = "sn"
 	certFingerprintField  = "fp"
+	rootCAField           = "root_ca"
 
 	helpSynConfig  = "Configure connectivity to TIBCO Cloud Mashery"
 	helpDescConfig = `
@@ -66,6 +68,10 @@ var pathBackendConfigFields = map[string]*framework.FieldSchema{
 	tlsPinningField: {
 		Type:        framework.TypeString,
 		Description: fmt.Sprintf("TLS pinning options: %s, %s, or %s", tlsPinningDefaultOpt, tlsPinningSystemOpt, tlsPinningCustomOpt),
+	},
+	rootCAField: {
+		Type:        framework.TypeString,
+		Description: "Concatenated PEM file of Root CA certificates to use when connecting to Mashery. Set to - to delegate Root CAs to system",
 	},
 }
 
@@ -146,6 +152,7 @@ func (b *AuthPlugin) readConfiguration(_ context.Context, _ *logical.Request, _ 
 			netLatencyField + " (effective)": b.cfg.EffectiveNetworkLatency().String(),
 			tlsPinningField + " (effective)": formatTLSPinningOption(b.cfg.EffectiveTLSPinning()),
 			tlsPinningField + " (desired)":   formatTLSPinningOption(b.cfg.TLSPinning),
+			rootCAField:                      formatRootCA(&b.cfg),
 			"mashery leaf cert":              formatCertPin(b.cfg.LeafCertPin),
 			"mashery issuer cert":            formatCertPin(b.cfg.IssuerCertPin),
 			"mashery root cert":              formatCertPin(b.cfg.RootCertPin),

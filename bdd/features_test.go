@@ -90,7 +90,7 @@ func TestConfigFeatures(t *testing.T) {
 		},
 		Options: &godog.Options{
 			Format:   "pretty",
-			Paths:    []string{"../features/config/config.feature"},
+			Paths:    []string{"../features/config"},
 			TestingT: t,
 		},
 	}

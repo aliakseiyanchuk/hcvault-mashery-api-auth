@@ -2,6 +2,7 @@ package mashery
 
 import (
 	"crypto/sha256"
+	"crypto/x509"
 	"encoding/hex"
 	"errors"
 	"fmt"
@@ -60,8 +61,23 @@ func formatTLSPinningOption(opt int) string {
 		return tlsPinningSystemOpt
 	case TLSPinningCustom:
 		return tlsPinningCustomOpt
+	case TLSPinningInsecure:
+		return tlsPinningInsecureOpt
 	default:
 		return strconv.Itoa(opt)
+	}
+}
+
+func formatRootCA(cfg *BackendConfiguration) string {
+	if len(cfg.TLSCerts) == 0 || cfg.TLSCerts == "-" {
+		return "---- use system ----"
+	} else {
+		pool := x509.NewCertPool()
+		if !pool.AppendCertsFromPEM([]byte(cfg.TLSCerts)) {
+			return "---- CAN NOT BE PARSED! ----"
+		} else {
+			return fmt.Sprintf("---- custom root CA certificates ----")
+		}
 	}
 }
 

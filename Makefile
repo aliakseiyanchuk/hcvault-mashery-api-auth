@@ -1,7 +1,7 @@
 TEST?=$$(go list ./... | grep -v 'vendor')
 HOSTNAME=github.com
 NAMESPACE=aliakseiyanchuk
-VERSION=0.3.1
+VERSION=0.4
 BINARY_PREFIX=hcvault-mashery-api-auth
 DOCKER_IMAGE=lspwd2/${BINARY_PREFIX}
 BINARY=${BINARY_PREFIX}_v${VERSION}
@@ -116,6 +116,7 @@ create_tls_enabled_container: compile_tls_container_binaries
 		--build-arg BINARY=${BINARY} \
 		--platform ${MULTIPLATFORMS}  \
 		-t ${DOCKER_IMAGE}:${VERSION} -t ${DOCKER_IMAGE}:latest \
+		--push \
 		./docker/tls-enabled
 
 run_tls_enabled_container: create_tls_enabled_container

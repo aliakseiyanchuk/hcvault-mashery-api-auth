@@ -22,9 +22,8 @@ const (
 )
 
 type V3ClientAndAuthorizer struct {
-	client        v3client.WildcardClient
-	tokenProvider v3client.FixedTokenProvider
-	lastUsed      time.Time
+	client   v3client.WildcardClient
+	lastUsed time.Time
 }
 
 type V2ClientAndAuthorizer struct {
@@ -88,16 +87,19 @@ func (b *AuthPlugin) AcceptConfigurationUpdate(ctx context.Context, newCfg Backe
 	}
 }
 
+var contextTokenProvider v3client.V3AccessTokenProvider
+
+func init() {
+	contextTokenProvider = v3client.NewContextTokenProvider()
+}
+
 func (b *AuthPlugin) GetMasheryV3Client(role *StoredRole) v3client.WildcardClient {
 	key := fmt.Sprintf("%s::%s", b.backendUUID, role.Name)
 
 	if cl := b.v3Clients[key]; cl.client != nil {
 		cl.lastUsed = time.Now()
-		cl.tokenProvider.UpdateToken(role.Usage.V3Token)
 		return cl.client
 	} else {
-		var provider = v3client.NewFixedTokenProvider(role.Usage.V3Token).(v3client.FixedTokenProvider)
-
 		params := v3client.Params{
 			// Mashery V3 configuration needs to be added!
 
@@ -105,7 +107,7 @@ func (b *AuthPlugin) GetMasheryV3Client(role *StoredRole) v3client.WildcardClien
 				TLSConfig:               b.cfg.EffectiveTLSConfiguration(),
 				TLSConfigDelegateSystem: b.cfg.EffectiveTLSPinning() == TLSPinningSystem,
 			},
-			Authorizer:    provider,
+			Authorizer:    contextTokenProvider,
 			QPS:           int64(role.Keys.MaxQPS),
 			AvgNetLatency: time.Millisecond * 172,
 		}
@@ -113,9 +115,8 @@ func (b *AuthPlugin) GetMasheryV3Client(role *StoredRole) v3client.WildcardClien
 		var clInst = v3client.NewWildcardClient(params)
 
 		cl := V3ClientAndAuthorizer{
-			tokenProvider: provider,
-			client:        clInst,
-			lastUsed:      time.Now(),
+			client:   clInst,
+			lastUsed: time.Now(),
 		}
 
 		b.v3Clients[key] = cl

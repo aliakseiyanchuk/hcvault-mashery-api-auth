@@ -13,7 +13,6 @@ import (
 	"net/url"
 	"strconv"
 	"strings"
-	"time"
 )
 
 type V3TokenContext interface {
@@ -136,10 +135,6 @@ func (b *AuthPlugin) doFetchWithErrorHandling(ctx context.Context, reqCtx *Reque
 		callCtx := v3client.ContextWithAccessToken(ctx, reqCtx.heap.GetRole().Usage.V3Token)
 		if resp, err := fetchFunc(callCtx, client); err != nil {
 			return nil, err
-		} else if resp.StatusCode == 400 {
-			// If the request is made, attempt a retry with a progressive back-off
-			time.Sleep(time.Second * time.Duration(2+3*i))
-			continue
 		} else if resp.StatusCode == 403 {
 			if errCode := resp.Header.Get("X-Mashery-Error-Code"); errCode == "ERR_403_DEVELOPER_INACTIVE" {
 				reqCtx.heap.GetRole().Usage.ResetToken()

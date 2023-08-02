@@ -31,34 +31,34 @@ func (dm *FetchWithErrorHandlingMock) FetchFunctionMock(ctx context.Context, cli
 	return args.Get(0).(*transport.WrappedResponse), args.Error(1)
 }
 
-func TestFetchWithErrorHandlingWillRetryAfterBadRequest(t *testing.T) {
-	reqCtx := mockWildcardAPIRequestContext()
-
-	dm := FetchWithErrorHandlingMock{}
-	dm.On("MockTokenRefresh", mock.Anything, mock.Anything).
-		Run(refreshAccessTokenTo("abc")).Return(nil).Once()
-
-	dm.On("FetchFunctionMock", mock.MatchedBy(func(ctx context.Context) bool {
-		return "abc" == v3client.AccessTokenFromContext(ctx)
-	}), mock.Anything).Return(badRequestResponse(), nil).Once()
-
-	dm.On("MockTokenRefresh", mock.Anything, mock.Anything).Return(nil).Once()
-
-	dm.On("FetchFunctionMock", mock.MatchedBy(func(ctx context.Context) bool {
-		return "abc" == v3client.AccessTokenFromContext(ctx)
-	}), mock.Anything).Return(okRequestResponse(), nil).Once()
-
-	b := AuthPlugin{
-		v3Clients: map[string]V3ClientAndAuthorizer{},
-	}
-	wr, err := b.doFetchWithErrorHandling(context.TODO(), reqCtx, dm.MockTokenRefresh, dm.FetchFunctionMock)
-
-	assert.Nil(t, err)
-	assert.NotNil(t, wr)
-	assert.Equal(t, 200, wr.StatusCode)
-
-	dm.AssertExpectations(t)
-}
+//func TestFetchWithErrorHandlingWillRetryAfterBadRequest(t *testing.T) {
+//	reqCtx := mockWildcardAPIRequestContext()
+//
+//	dm := FetchWithErrorHandlingMock{}
+//	dm.On("MockTokenRefresh", mock.Anything, mock.Anything).
+//		Run(refreshAccessTokenTo("abc")).Return(nil).Once()
+//
+//	dm.On("FetchFunctionMock", mock.MatchedBy(func(ctx context.Context) bool {
+//		return "abc" == v3client.AccessTokenFromContext(ctx)
+//	}), mock.Anything).Return(badRequestResponse(), nil).Once()
+//
+//	dm.On("MockTokenRefresh", mock.Anything, mock.Anything).Return(nil).Once()
+//
+//	dm.On("FetchFunctionMock", mock.MatchedBy(func(ctx context.Context) bool {
+//		return "abc" == v3client.AccessTokenFromContext(ctx)
+//	}), mock.Anything).Return(okRequestResponse(), nil).Once()
+//
+//	b := AuthPlugin{
+//		v3Clients: map[string]V3ClientAndAuthorizer{},
+//	}
+//	wr, err := b.doFetchWithErrorHandling(context.TODO(), reqCtx, dm.MockTokenRefresh, dm.FetchFunctionMock)
+//
+//	assert.Nil(t, err)
+//	assert.NotNil(t, wr)
+//	assert.Equal(t, 200, wr.StatusCode)
+//
+//	dm.AssertExpectations(t)
+//}
 
 func TestFetchWithErrorHandlingWillResetAccessTokenAfter403(t *testing.T) {
 	reqCtx := mockWildcardAPIRequestContext()

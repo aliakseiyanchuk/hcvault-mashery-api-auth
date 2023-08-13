@@ -158,6 +158,10 @@ cd machauth-behind-nginx
 docker compose build
 docker compose up -d 
 ```
+> Note: the source code intentionally does _not_ include TLS certificates for the nginx container. So running the
+> above-mentioned command on a checked out sources will probably _fail_ by design. You need to create
+> certificate and a corresponding private key yourself (`nginx.crt` and `nginx.key`) and place these in 
+> `machauth-behind-nginx/nginx` for the build to succeed.
 
 ## First-time setup
 After you have started container for the very first time, you need to initialize your Vault 

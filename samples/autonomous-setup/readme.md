@@ -154,7 +154,7 @@ docker run --cap-add=IPC_LOCK -p 127.0.0.1:8200:8200 lspwd2/hcvault-mashery-api-
 If you run Vault behind nginx proxy using the supplied compose file, you need to build local image and
 run it as follows:
 ```shell
-cd machauth-behind-nginx
+cd mashauth-behind-nginx
 docker compose build
 docker compose up -d 
 ```

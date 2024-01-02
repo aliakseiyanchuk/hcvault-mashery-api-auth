@@ -340,26 +340,39 @@ func renderV3ResponseToEmpty(_ context.Context, _ *RequestHandlerContext[Wildcar
 
 func (b *AuthPlugin) ensureAccessTokenValid(ctx context.Context, reqCtx *RequestHandlerContext[WildcardAPIResponseContext]) (*logical.Response, error) {
 	role := reqCtx.heap.GetRole()
+	return nil, ensureAccessTokenValidForRole(ctx, b, reqCtx, role)
+}
+
+func (b *AuthPlugin) ensureAccessTokenValidWithRoleContext(ctx context.Context, reqCtx *RequestHandlerContext[RoleContext]) (*logical.Response, error) {
+	role := reqCtx.heap.GetRole()
+	return nil, ensureAccessTokenValidForRole(ctx, b, reqCtx, role)
+}
+
+func ensureAccessTokenValidForRole[T any](ctx context.Context, b *AuthPlugin, reqCtx *RequestHandlerContext[T], role *StoredRole) error {
+	if role == nil {
+		return errors.New("received a nil pointer to role; need an initialized StoreRole to request access token")
+	}
+
 	if role.Usage.V3TokenNeedsRenew() {
-		b.Logger().Info(fmt.Sprintf("stored token for role %s needs to be renewed for further operations", reqCtx.heap.GetRole().Name))
+		b.Logger().Info(fmt.Sprintf("stored token for role %s needs to be renewed for further operations", role.Name))
 
 		creds := role.asV3Credentials()
 
 		if tkn, err := b.GetOAuthHelper().RetrieveAccessTokenFor(&creds); err != nil {
-			b.Logger().Error(fmt.Sprintf("attempt to renew token for role %s failed: %s", reqCtx.heap.GetRole().Name, err.Error()))
-			return nil, err
+			b.Logger().Error(fmt.Sprintf("attempt to renew token for role %s failed: %s", role.Name, err.Error()))
+			return err
 		} else {
 			role.Usage.ReplaceAccessToken(tkn.AccessToken, tkn.ExpiryTime().Unix())
-			b.Logger().Info(fmt.Sprintf("successfully renewed token for role %s", reqCtx.heap.GetRole().Name))
+			b.Logger().Info(fmt.Sprintf("successfully renewed token for role %s", role.Name))
 
 			if writeErr := reqCtx.WritePath(ctx, roleUsagePath(reqCtx), &role.Usage); writeErr != nil {
-				b.Logger().Error(fmt.Sprintf("failed to persist acquired token for role %s: %s", reqCtx.heap.GetRole().Name, writeErr.Error()))
-				return nil, writeErr
+				b.Logger().Error(fmt.Sprintf("failed to persist acquired token for role %s: %s", role.Name, writeErr.Error()))
+				return writeErr
 			}
 		}
 	}
 
-	return nil, nil
+	return nil
 }
 
 func retrieveV3AccessToken(_ context.Context, reqCtx *RequestHandlerContext[V3TokenContext]) (*logical.Response, error) {
@@ -382,14 +395,18 @@ func renderV3LeaseResponse(_ context.Context, reqCtx *RequestHandlerContext[V3To
 
 func renderV3PlainResponse(_ context.Context, reqCtx *RequestHandlerContext[V3TokenContext]) (*logical.Response, error) {
 	token := reqCtx.heap.GetV3TokenResponse()
+	expiryTime := token.ExpiryTime()
+
 	if token == nil {
 		return nil, errors.New("v3 response rendering called before the response is available")
 	}
 	rv := &logical.Response{
 		Data: map[string]interface{}{
-			secretAccessToken:           token.AccessToken,
-			secretAccessTokenExpiryTime: token.ExpiryTime(),
-			roleQpsField:                reqCtx.heap.GetRole().Keys.MaxQPS,
+			secretAccessToken:              token.AccessToken,
+			secretAccessTokenExpiryTime:    expiryTime,
+			secretAccessTokenExpiryEpoch:   expiryTime.Unix(),
+			secretAccessTokenTimeRemaining: token.TimeLeft(),
+			roleQpsField:                   reqCtx.heap.GetRole().Keys.MaxQPS,
 		},
 	}
 

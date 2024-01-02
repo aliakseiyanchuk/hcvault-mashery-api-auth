@@ -242,7 +242,7 @@ func makeNew(conf *logical.BackendConfig) (*AuthPlugin, error) {
 			pathRoleImpExpExport(&retVal),
 			pathRoleImpExpImport(&retVal),
 			pathRoleGrant(&retVal),
-			pathRoleForgetToken(&retVal),
+			pathRoleToken(&retVal),
 
 			// Support several flavours of accepting the V2 method.
 			pathRoleV2(&retVal, "roles/"+framework.GenericNameRegex(roleName)+"/v2"),

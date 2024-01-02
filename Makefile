@@ -1,7 +1,7 @@
 TEST?=$$(go list ./... | grep -v 'vendor')
 HOSTNAME=github.com
 NAMESPACE=aliakseiyanchuk
-VERSION=0.4
+VERSION=0.5
 BINARY_PREFIX=hcvault-mashery-api-auth
 DOCKER_IMAGE=lspwd2/${BINARY_PREFIX}
 BINARY=${BINARY_PREFIX}_v${VERSION}

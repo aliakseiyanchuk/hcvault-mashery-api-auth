@@ -21,9 +21,11 @@ const (
 	rolePasswordField = "password"
 	roleQpsField      = "qps"
 
-	secretAccessToken           = "access_token"
-	secretAccessTokenExpiryTime = "expiry"
-	secretSignedSecretField     = "sig"
+	secretAccessToken              = "access_token"
+	secretAccessTokenExpiryTime    = "expiry"
+	secretAccessTokenExpiryEpoch   = "expiry_epoch"
+	secretAccessTokenTimeRemaining = "token_time_remaining"
+	secretSignedSecretField        = "sig"
 
 	secretInternalRoleStoragePath = "roleStoragePath"
 	secretInternalRefreshToken    = "refresh_token"
@@ -190,6 +192,7 @@ type StoredRolePrivateKey struct {
 type StoredRoleUsage struct {
 	V3Token          string `json:"_v3t"`
 	V3TokenExpiry    int64  `json:"_v3te"`
+	V3TokenObtained  int64  `json:"_v3to"`
 	ExplicitNumUses  int64  `json:"enu,omitempty"`
 	RemainingNumUses int64  `json:"_urm"`
 	ExplicitTerm     int64  `json:"etm,omitempty"`
@@ -199,6 +202,7 @@ type StoredRoleUsage struct {
 func (sru *StoredRoleUsage) ReplaceAccessToken(tkn string, expiry int64) {
 	sru.V3Token = tkn
 	sru.V3TokenExpiry = expiry
+	sru.V3TokenObtained = time.Now().Unix()
 }
 
 // StoredRole Authentication role data that is stored within Vault encrypted storage
@@ -239,6 +243,7 @@ func (sr *StoredRoleUsage) IsUnboundedUsage() bool {
 func (sr *StoredRoleUsage) ResetToken() {
 	sr.V3Token = ""
 	sr.V3TokenExpiry = -1
+	sr.V3TokenObtained = -1
 }
 
 func (sr *StoredRoleUsage) V3TokenNeedsRenew() bool {

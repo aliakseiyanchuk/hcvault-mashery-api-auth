@@ -2,8 +2,8 @@
 layout: api 
 page_title: /role/:roleName/import - HTTP API 
 description: |-
-The `/role/:roleName/import` endpoint is used to import the encrypted  data received from another
-Vault administrator
+  The `/role/:roleName/import` endpoint is used to import the encrypted  data received from another
+  Vault administrator
 ---
 
 # `/roles/:roleName/import`

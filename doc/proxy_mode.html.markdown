@@ -2,8 +2,8 @@
 layout: docs 
 page_title: TIBCO Mashery V2/V3 Secrets Engine Proxy Mode 
 description: |- The Mashery V2/V3 Access
-Credentials secrets engine can proxy requests to the Mashery API, thus removing the needs to distribute the Mashery
-secretes outside of Vault.
+  Credentials secrets engine can proxy requests to the Mashery API, thus removing the needs to distribute the Mashery
+  secretes outside of Vault.
 ---
 
 # Proxy Mode

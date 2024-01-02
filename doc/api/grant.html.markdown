@@ -2,8 +2,8 @@
 layout: api 
 page_title: /role/:roleName/grant - HTTP API 
 description: |-
-The `/role/:roleName/grant` endpoint is used to grant a Mashery API access credentials that will be 
-visible to the applications
+  The `/role/:roleName/grant` endpoint is used to grant a Mashery API access credentials that will be 
+  visible to the applications
 ---
 
 # `/roles/:roleName/grant`

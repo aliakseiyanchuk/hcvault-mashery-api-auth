@@ -2,8 +2,8 @@
 layout: docs
 page_title: TIBCO Mashery V2/V3 Secrets Engine Limitations
 description: |-
-Mashery secret engine has certain limitations regarding the setup and operation that the Vault adminsitrator
-needs to be aware of
+  Mashery secret engine has certain limitations regarding the setup and operation that the Vault adminsitrator
+  needs to be aware of
 ---
 
 # Secret Engine Limitations

@@ -2,9 +2,9 @@
 layout: docs 
 page_title: TIBCO Mashery V2/V3 Secrets Engine Pull Mode Configuration 
 description: |- 
-The Mashery V2/V3 Access Credentials secrets engine facilitates safe exchange of long-term Mashery credentials,
-aiming to remove the possibilities to have these exposed during the hand-over and/or exchange between
-the team members managing TIBCO Could Mashery.
+  The Mashery V2/V3 Access Credentials secrets engine facilitates safe exchange of long-term Mashery credentials,
+  aiming to remove the possibilities to have these exposed during the hand-over and/or exchange between
+  the team members managing TIBCO Could Mashery.
 ---
 
 # Sharing Mashery Keys in Pull Mode

@@ -16,7 +16,7 @@ import (
 )
 
 const (
-	pluginVersionL = "TIBCO Cloud Mashery Secret Engine v 0.3.1"
+	pluginVersionL = "TIBCO Cloud Mashery Secret Engine v 0.5"
 
 	httpIdle = time.Minute * -15
 )

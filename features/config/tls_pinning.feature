@@ -49,3 +49,27 @@ Feature: TLS pinning configuration
       | Password | pwd     |
     * reading /roles/v3Role/v3/services should fail due to: Post "https://api.mashery.com/v3/token": no matching chains
 
+  Scenario: Setting insecure configuration
+    Given remounted secret engine
+    * tls pinning set to insecure
+    Then effective tls pinning is insecure
+    Given role v3Role configured with:
+      | AreaID   | a-b-c-d |
+      | ApiKey   | key     |
+      | Secret   | Secret  |
+      | Username | user    |
+      | Password | pwd     |
+    Then reading /roles/v3Role/v3/services should fail due to: {"error":"invalid_client"}
+
+  Scenario: Incompatible Root CA will lead to TLS handshake error
+    Given remounted secret engine
+    * tls pinning set to system
+    * root CA is Google
+    Then configuration property root_ca reads ---- custom root CA certificates ----
+    Given role v3Role configured with:
+      | AreaID   | a-b-c-d |
+      | ApiKey   | key     |
+      | Secret   | Secret  |
+      | Username | user    |
+      | Password | pwd     |
+    * reading /roles/v3Role/v3/services should fail due to: certificate signed by unknown authority

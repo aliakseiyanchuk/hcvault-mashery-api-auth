@@ -2,8 +2,8 @@
 layout: api 
 page_title: /role/:roleName/export - HTTP API 
 description: |-
-The `/role/:roleName/export` endpoint is used to encrypt role's data for secure transfer to another
-Vault administrator
+  The `/role/:roleName/export` endpoint is used to encrypt role's data for secure transfer to another
+  Vault administrator
 ---
 
 # `/roles/:roleName/export`

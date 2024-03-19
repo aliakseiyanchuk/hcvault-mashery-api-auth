@@ -2,8 +2,8 @@
 layout: docs
 page_title: Setting up Vault agent
 description: |- 
-Mashery secret engine requires a user to authenticate. In some cases, it is unavoidable that authentication
-data will be replicated into a cloud storage
+  Mashery secret engine requires a user to authenticate. In some cases, it is unavoidable that authentication
+  data will be replicated into a cloud storage
 ---
 
 # Setting up Vault agent

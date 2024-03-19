@@ -241,7 +241,11 @@ func renderRole(_ context.Context, reqCtx *RequestHandlerContext[RoleContext]) (
 
 		if role.Usage.V3TokenExpired() {
 			v3Token = "---EXPIRED---"
-			v3TokenLife = fmt.Sprintf("ended epoch %d, now is epoch %d", role.Usage.V3TokenExpiry, time.Now().Unix())
+			now := time.Now()
+			expTime := time.Unix(role.Usage.V3TokenExpiry, 0)
+			diff := now.Sub(expTime)
+
+			v3TokenLife = fmt.Sprintf("expired on %s (%s ago)", expTime, diff)
 		} else {
 			if role.Usage.V3TokenNeedsRenew() {
 				v3Token = "---NEEDS-RENEW---"

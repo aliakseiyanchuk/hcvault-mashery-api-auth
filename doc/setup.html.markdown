@@ -2,7 +2,7 @@
 layout: docs
 page_title: TIBCO Mashery V2/V3 Secrets Engine Installation Guide
 description: |-
-The guide describes the Vault-specific installation steps that are required to install this plugin
+  The guide describes the Vault-specific installation steps that are required to install this plugin
 ---
 
 # Installation Guide
@@ -501,5 +501,6 @@ vault write mash-creds/config tls_pinning=custom
 ```
 
 To reset TLS pinning to default, execute
-```shellvault write mash-creds/config tls_pinning=default
+```shell
+vault write mash-creds/config tls_pinning=default
 ```

@@ -2,8 +2,8 @@
 layout: docs
 page_title: TIBCO Mashery V2/V3 Secrets Engine API
 description: |-
-The Mashery V2/V3 secrets engine API provides API for generating access tokens, v2 credentials, or executing
-V2 or V3 calls from the Vault itself.
+  The Mashery V2/V3 secrets engine API provides API for generating access tokens, v2 credentials, or executing
+  V2 or V3 calls from the Vault itself.
 ---
 
 # API Structure

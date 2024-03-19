@@ -1,0 +1,36 @@
++----------------------------------------------------------------------------------------------------------------+
+| TLS chains troubleshooting helper for Mashery V2/V3 Access Credentials Secrets Engine
++----------------------------------------------------------------------------------------------------------------+
+
+Input supplies {{ len . }} certificate chain(s)
+{{ range $i, $chain := . }}
+{{ $idx := add $i 1}}{{ $idx }}. Chain of {{  len $chain }} certificates {{ range $ci, $cert := $chain }}
+ {{ $certIdx := add $ci 1 }} - Certificate no. {{ $certIdx }}:
+    Valid: {{ $cert.NotBefore }} to {{ $cert.NotAfter }}
+    Common Name: {{ $cert.Subject.CommonName }}
+    Serial Number: {{ hex $cert.SerialNumber.Bytes }} ({{ $cert.SerialNumber }})
+    SHA256 Fingerprint: {{ hex (sha256 $cert.Raw) }}
+{{ end }}
+If you want to pin this chain manually, and assuming the provider is mounted at mash-auth/, here are the commands
+you can use to enter the certificate pinning information: {{ range $ci, $cert := $chain }}{{ $fp := sha256 $cert.Raw }}{{ if eq $ci 0 }}
+- To pin leaf (server) certificate, run:
+  vault write mash-auth/config/certs/leaf \
+    cn="{{ $cert.Subject.CommonName }}" \
+    sn="{{ hex $cert.SerialNumber.Bytes }}" \
+    fp="{{ hex $fp }}"{{ else if eq $ci (sub (len $chain) 1) }}
+- To pin root certificate, run:
+  vault write mash-auth/config/certs/root \
+    cn="{{ $cert.Subject.CommonName }}" \
+    sn="{{ hex $cert.SerialNumber.Bytes }}" \
+    fp="{{ hex $fp }}"{{ else }}
+- To in an intermediary certificate, run:
+  vault write mash-auth/config/certs/issuer \
+    cn="{{ $cert.Subject.CommonName }}" \
+    sn="{{ hex $cert.SerialNumber.Bytes }}"
+    fp="{{ hex $fp }}"{{ end }}
+{{ end }}{{ end }}
+These settings will take effect only if the plugin configuration is set for custom pinning:
+
+  vault write mash-auth/config tls_pinning=custom
+
+---

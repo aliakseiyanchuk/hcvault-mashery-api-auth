@@ -2,8 +2,8 @@
 layout: docs
 page_title: TIBCO Mashery V2/V3 Secrets Engine Grant
 description: |-
-The Mashery V2/V3 Access Credentials secrets engine generates md5 signatures (for V2 Mashery API) and access/refresh
-tokens (for V3 Mashery API).
+  The Mashery V2/V3 Access Credentials secrets engine generates md5 signatures (for V2 Mashery API) and access/refresh
+  tokens (for V3 Mashery API).
 ---
 
 # Granting V2/V3 Access Credentials
@@ -16,7 +16,21 @@ applications to authenticate to Mashery V2 and/or V3 API.
 > 
 > There is **no documented way** to revoke a Mashery V3 access token. Be sure to understand that `lease``-type
 > grants are implemented **only** to make this data cacheable in the Vault agent's cache. Revoking this leave 
-> **will not** destroy Mashery token. 
+> **will not** destroy Mashery token.
+
+There are two flavours of accessing V3 access tokens:
+- via `/grant` endpoint which will create a *new* access token *always*; and 
+- via `/token` endpoint which will *cache* an access token as long as it is valid.
+
+The difference between these two methods is that `/token` endpoint and will store and automatically refresh
+the access token upon the expiry of the cache value. The cached token can also be deleted. Granted tokens
+(that is, those created with `/grant` endpoint) are not tracked.
+
+The `/token` endpoint can be favoured by a consuming application which is frequently restarted, such as e.g.
+Terraform provider. In this case, using `/token` endpoint will minimize the number of access tokens created, 
+or applications which want to avoid implementing stateful storage logic while being able to rotate the access
+token during the running of the application.
+
 
 ## Usage
 
@@ -38,11 +52,11 @@ v2_capable           true
 v3_capable           true
 ```
 
-### Grant parameters
+### Grant parameters (`/grant` endpoint)
 
 This output defines which Mashery API this role can support and gives the overview of remaining usage.
 
->In case Mashery data has exceeded its term or number of time it's used, it will not be possible by design to
+> In case Mashery data has exceeded its term or number of time it's used, it will not be possible by design to
 > retrieve Mashery credentials. Contact your _seeding administrator_ as [this guide](pull_mode.html.markdown) 
 > describes to renew the grant.
 
@@ -50,21 +64,26 @@ The grant option access two optional parameters:
 - `api` identifies the API version. Only `2` and `3` are valid options, with 3 being the default
 - `lease` identifies whether to return the created secret as Vault [lease](https://www.vaultproject.io/docs/concepts/lease).
   This parameter can be meaningfully set to true only for caching purposes within the Vault's agent
-  as [this guide](agent.html.markdown) explains. 
+  as [this guide](agent.html.markdown) explains.
+
+### Token reveal parameters (`/token` endpoint)
 
 ### Using the CLI
 
 To read the V3 access token using the CLI, execute:
 ```shell
 vault read mash-creds/roles/:roleName/grant
+vault read mash-creds/roles/:roleName/token
 ```
 This will obtain Mashery V3 token (if the role is capable) and will produce the following output:
 ```shell
-Key             Value
----             -----
-access_token    access-token-value
-expiry          yyyy-MM-ddTHH:mm:ss+TZ:00
-qps             2
+Key                     Value
+---                     -----
+access_token            access-token-value
+expiry                  yyyy-MM-ddTHH:mm:ss+TZ:00
+expiry_epoch            1704191132
+qps                     2
+token_time_remaining    1817
 ```
 
 V2 access tokens are retrieved require specifying the `api=2` parameter:
@@ -96,6 +115,8 @@ A successful response body will contain Vault API JSON object, bearing the `data
 class V3AccessTokenData {
     'access_token': string
     expiry: Date
+    'expiry_epoch': number
+    'token_time_remaining': number
     qps: number
 }
 ````
@@ -110,6 +131,8 @@ A full response will be similar to the following:
     "data": {
         "access_token": "access-token-value",
         "expiry": "yyyy-MM-ddTHH:mm:ss+TZ:00",
+        "expiry_epoch": 1704193422,
+        "token_time_remaining": 3600,
         "qps": 2
     },
     "wrap_info": null,
@@ -134,6 +157,8 @@ The output will be essentially the same; with the difference that it will carry 
     "data": {
         "access_token": "access-token-value",
         "expiry": "yyyy-MM-ddTHH:mm:ss+TZ:00",
+        "expiry_epoch": 1704193422,
+        "token_time_remaining": 3600,
         "qps": 2
     },
     "wrap_info": null,

@@ -24,6 +24,12 @@ const (
 The path allows extracting the direct value of the Mashery V2 and/or V3 credentials that can be used in the
 consuming applications.
 `
+	helpSynRoleToken  = "Retrieve a valid V3 access token that can be used for an immediate V3 API call"
+	helpDescRoleToken = `
+The path retrieves the V3 access token, requesting the new token if required. The principle difference with the
+/grant API method is that the token obtained here is stored and reused for the subsequent calls, provided that 
+the token is valid. The /grant API always returns a new token.
+`
 )
 
 func v2AccessSecret() *framework.Secret {
@@ -115,36 +121,15 @@ func pathRoleGrant(b *AuthPlugin) *framework.Path {
 	}
 }
 
-func pathRoleForgetToken(b *AuthPlugin) *framework.Path {
-	return &framework.Path{
-		Pattern: "roles/" + framework.GenericNameRegex(roleName) + "/token",
-		Fields: map[string]*framework.FieldSchema{
-			roleName: {
-				Type:        framework.TypeString,
-				Description: "Role name",
-				Required:    true,
-			},
+func mapRoleContextToV3TokenContext(baseChecks *SimpleRunner[RoleContext]) MappingRunner[RoleContext, V3TokenContext] {
+	mr := MappingRunner[RoleContext, V3TokenContext]{
+		parent:   baseChecks,
+		exporter: func(in V3TokenContext) RoleContext { return &RoleContainer{} },
+		importer: func(in RoleContext, out V3TokenContext) {
+			out.CarryRole(in.GetRole())
 		},
-
-		Operations: map[logical.Operation]framework.OperationHandler{
-			logical.DeleteOperation: &framework.PathOperation{
-				Callback: b.deleteToken,
-				Summary:  "Deletes stored V3 access token",
-			},
-		},
-
-		ExistenceCheck: b.roleExistenceCheck,
 	}
-}
-
-func (b *AuthPlugin) deleteToken(ctx context.Context, request *logical.Request, data *framework.FieldData) (*logical.Response, error) {
-	chain := SimpleChain(
-		readRole[RoleContext](true),
-		forgetUsedToken,
-		saveRoleUsage[RoleContext],
-	)
-
-	return handleRoleBoundOperation(ctx, b, request, data, chain)
+	return mr
 }
 
 func (b *AuthPlugin) issueGrant(ctx context.Context, request *logical.Request, data *framework.FieldData) (*logical.Response, error) {
@@ -186,13 +171,7 @@ func (b *AuthPlugin) issueGrant(ctx context.Context, request *logical.Request, d
 		var container V3TokenContext
 		container = &V3TokenContextContainer{}
 
-		mr := MappingRunner[RoleContext, V3TokenContext]{
-			parent:   &baseChecks,
-			exporter: func(in V3TokenContext) RoleContext { return &RoleContainer{} },
-			importer: func(in RoleContext, out V3TokenContext) {
-				out.CarryRole(in.GetRole())
-			},
-		}
+		mr := mapRoleContextToV3TokenContext(&baseChecks)
 
 		mr.Append(
 			retrieveV3AccessToken,
@@ -212,9 +191,10 @@ func (b *AuthPlugin) createV3LeasedResponse(tkn *masherytypes.TimedAccessTokenRe
 
 	v3Secret := b.Secret(secretMasheryV3Access)
 	response := v3Secret.Response(map[string]interface{}{
-		secretAccessToken:           tkn.AccessToken,
-		secretAccessTokenExpiryTime: tkn.ExpiryTime(),
-		roleQpsField:                v3Rec.Keys.MaxQPS,
+		secretAccessToken:            tkn.AccessToken,
+		secretAccessTokenExpiryTime:  tkn.ExpiryTime(),
+		secretAccessTokenExpiryEpoch: tkn.ExpiryTime().Unix(),
+		roleQpsField:                 v3Rec.Keys.MaxQPS,
 	}, map[string]interface{}{
 		secretInternalRoleStoragePath: v3Rec.StoragePath,
 		secretInternalRefreshToken:    tkn.RefreshToken,

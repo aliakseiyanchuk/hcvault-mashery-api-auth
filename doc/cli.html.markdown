@@ -2,7 +2,7 @@
 layout: docs
 page_title: TIBCO Mashery V2/V3 CLI
 description: |-
-Mashery secret engine allows interacting with Mashery via CLI using standard Vault commands.
+  Mashery secret engine allows interacting with Mashery via CLI using standard Vault commands.
 ---
 
 # CLI Guide

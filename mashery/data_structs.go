@@ -3,6 +3,7 @@ package mashery
 import (
 	"context"
 	"crypto/tls"
+	"crypto/x509"
 	"github.com/aliakseiyanchuk/mashery-v3-go-client/transport"
 	"github.com/aliakseiyanchuk/mashery-v3-go-client/v3client"
 	"github.com/hashicorp/vault/sdk/framework"
@@ -20,9 +21,11 @@ const (
 	rolePasswordField = "password"
 	roleQpsField      = "qps"
 
-	secretAccessToken           = "access_token"
-	secretAccessTokenExpiryTime = "expiry"
-	secretSignedSecretField     = "sig"
+	secretAccessToken              = "access_token"
+	secretAccessTokenExpiryTime    = "expiry"
+	secretAccessTokenExpiryEpoch   = "expiry_epoch"
+	secretAccessTokenTimeRemaining = "token_time_remaining"
+	secretSignedSecretField        = "sig"
 
 	secretInternalRoleStoragePath = "roleStoragePath"
 	secretInternalRefreshToken    = "refresh_token"
@@ -34,6 +37,7 @@ const (
 	TLSPinningDefault = iota
 	TLSPinningSystem
 	TLSPinningCustom
+	TLSPinningInsecure
 )
 
 type BackendConfiguration struct {
@@ -41,6 +45,8 @@ type BackendConfiguration struct {
 	ProxyServer      string `json:"_proxy_s"`
 	ProxyServerAuth  string `json:"_proxy_t"`
 	ProxyServerCreds string `json:"_proxy_c"`
+
+	TLSCerts string `json:"_tls_certs"`
 
 	CLIWriteEnabled bool `json:"_cli_rw"`
 
@@ -97,10 +103,31 @@ func (bc *BackendConfiguration) EffectiveTLSPinning() int {
 	return bc.TLSPinning
 }
 
-func (bc *BackendConfiguration) EffectiveTLSConfiguration() *tls.Config {
+func (bc *BackendConfiguration) decorateRootCACerts(config *tls.Config) *tls.Config {
+	if len(bc.TLSCerts) == 0 || "-" == bc.TLSCerts {
+		return config
+	}
+
+	rv := config
+	if rv == nil {
+		rv = &tls.Config{}
+	}
+
+	pool := x509.NewCertPool()
+	pool.AppendCertsFromPEM([]byte(bc.TLSCerts))
+
+	rv.RootCAs = pool
+
+	return rv
+}
+func (bc *BackendConfiguration) decorateCertificatePinning() *tls.Config {
 	switch bc.EffectiveTLSPinning() {
 	case TLSPinningDefault:
 		return transport.DefaultTLSConfig()
+	case TLSPinningInsecure:
+		return &tls.Config{
+			InsecureSkipVerify: true,
+		}
 	case TLSPinningSystem:
 		return nil
 	case TLSPinningCustom:
@@ -120,6 +147,13 @@ func (bc *BackendConfiguration) EffectiveTLSConfiguration() *tls.Config {
 	default:
 		return transport.DefaultTLSConfig()
 	}
+}
+
+func (bc *BackendConfiguration) EffectiveTLSConfiguration() *tls.Config {
+	rv := bc.decorateCertificatePinning()
+	rv = bc.decorateRootCACerts(rv)
+
+	return rv
 }
 
 // RoleKeys Keys of Mashery authentication role.
@@ -158,9 +192,17 @@ type StoredRolePrivateKey struct {
 type StoredRoleUsage struct {
 	V3Token          string `json:"_v3t"`
 	V3TokenExpiry    int64  `json:"_v3te"`
+	V3TokenObtained  int64  `json:"_v3to"`
 	ExplicitNumUses  int64  `json:"enu,omitempty"`
 	RemainingNumUses int64  `json:"_urm"`
 	ExplicitTerm     int64  `json:"etm,omitempty"`
+}
+
+// ReplaceAccessToken replace access token and expiry time used in this struct.
+func (sru *StoredRoleUsage) ReplaceAccessToken(tkn string, expiry int64) {
+	sru.V3Token = tkn
+	sru.V3TokenExpiry = expiry
+	sru.V3TokenObtained = time.Now().Unix()
 }
 
 // StoredRole Authentication role data that is stored within Vault encrypted storage
@@ -201,6 +243,7 @@ func (sr *StoredRoleUsage) IsUnboundedUsage() bool {
 func (sr *StoredRoleUsage) ResetToken() {
 	sr.V3Token = ""
 	sr.V3TokenExpiry = -1
+	sr.V3TokenObtained = -1
 }
 
 func (sr *StoredRoleUsage) V3TokenNeedsRenew() bool {

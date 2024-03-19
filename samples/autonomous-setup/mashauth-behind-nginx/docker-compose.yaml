@@ -2,23 +2,34 @@ version: '3.7'
 
 services:
   vault-mash-auth:
+    image: lspwd2/hcvault-mashery-api-auth:latest
     container_name: vault-mash-auth-container
-    hostname: vault-mash-auth
+    hostname: inner_vault
     cap_add:
       - IPC_LOCK
     volumes:
       - "vault_file:/vault/file"
       - "vault_logs:/vault/logs"
+
+    networks:
+      - inner_net
+
+  nginx:
+    container_name: nginx
+    hostname: nginx
     ports:
       - target: 8200
         protocol: tcp
         published: 8200
         mode: host
     build:
-      context: .
-      dockerfile: ./Dockerfile
+      context: ./nginx
+    networks:
+      - inner_net
 
-    command: [ "vault", "server", "-config=/vault/config" ]
+
+networks:
+  inner_net:
 
 volumes:
   vault_file:

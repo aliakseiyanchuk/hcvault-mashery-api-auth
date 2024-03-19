@@ -1,0 +1,25 @@
+version: '3.7'
+
+services:
+  vault-mash-auth:
+    container_name: vault-mash-auth-container
+    hostname: vault-mash-auth
+    cap_add:
+      - IPC_LOCK
+    volumes:
+      - "vault_file:/vault/file"
+      - "vault_logs:/vault/logs"
+    ports:
+      - target: 8200
+        protocol: tcp
+        published: 8200
+        mode: host
+    build:
+      context: .
+      dockerfile: Dockerfile
+
+    command: [ "vault", "server", "-config=/vault/config" ]
+
+volumes:
+  vault_file:
+  vault_logs:

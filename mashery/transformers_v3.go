@@ -35,42 +35,52 @@ func (c *V3TokenContextContainer) CarryV3TokenResponse(s *masherytypes.TimedAcce
 	c.token = s
 }
 
-func fetchV3Resource(path string, qs url.Values) func(context.Context, *RequestHandlerContext[WildcardAPIResponseContext]) (*logical.Response, error) {
+func (b *AuthPlugin) fetchV3Resource(path string, qs url.Values) func(context.Context, *RequestHandlerContext[WildcardAPIResponseContext]) (*logical.Response, error) {
 	return func(ctx context.Context, reqCtx *RequestHandlerContext[WildcardAPIResponseContext]) (*logical.Response, error) {
-		resp, err := fetchWithErrorHandling(ctx, reqCtx, reqCtx.heap.GetRole(), func(ctx context.Context, client v3client.WildcardClient) (*transport.WrappedResponse, error) {
+		resp, err := b.fetchWithErrorHandling(ctx, reqCtx, func(ctx context.Context, client v3client.WildcardClient) (*transport.WrappedResponse, error) {
 			return client.FetchAny(ctx, path, &qs)
 		})
 
+		reqCtx.heap.CarryMethod("GET")
 		reqCtx.heap.CarryAPIResponse(resp)
+
+		b.Logger().Info("Request finished", "code", resp.StatusCode)
 		return nil, err
 	}
 }
 
-func deleteV3Resource(path string) func(context.Context, *RequestHandlerContext[WildcardAPIResponseContext]) (*logical.Response, error) {
+func (b *AuthPlugin) deleteV3Resource(path string) func(context.Context, *RequestHandlerContext[WildcardAPIResponseContext]) (*logical.Response, error) {
 	return func(ctx context.Context, reqCtx *RequestHandlerContext[WildcardAPIResponseContext]) (*logical.Response, error) {
-		resp, err := fetchWithErrorHandling(ctx, reqCtx, reqCtx.heap.GetRole(), func(ctx context.Context, client v3client.WildcardClient) (*transport.WrappedResponse, error) {
+		resp, err := b.fetchWithErrorHandling(ctx, reqCtx, func(ctx context.Context, client v3client.WildcardClient) (*transport.WrappedResponse, error) {
 			return client.DeleteAny(ctx, path)
 		})
 
+		reqCtx.heap.CarryMethod("DELETE")
 		reqCtx.heap.CarryAPIResponse(resp)
+
+		b.Logger().Info("Request finished", "code", resp.StatusCode)
 		return nil, err
 	}
 }
 
-func writeToV3Resource(path string, meth int, data map[string]interface{}) func(context.Context, *RequestHandlerContext[WildcardAPIResponseContext]) (*logical.Response, error) {
+func (b *AuthPlugin) writeToV3Resource(path string, meth int, data map[string]interface{}) func(context.Context, *RequestHandlerContext[WildcardAPIResponseContext]) (*logical.Response, error) {
 	return func(ctx context.Context, reqCtx *RequestHandlerContext[WildcardAPIResponseContext]) (*logical.Response, error) {
-		resp, err := fetchWithErrorHandling(ctx, reqCtx, reqCtx.heap.GetRole(), func(ctx context.Context, client v3client.WildcardClient) (*transport.WrappedResponse, error) {
+		resp, err := b.fetchWithErrorHandling(ctx, reqCtx, func(ctx context.Context, client v3client.WildcardClient) (*transport.WrappedResponse, error) {
 			switch meth {
 			case methodPOST:
+				reqCtx.heap.CarryMethod("POST")
 				return client.PostAny(ctx, path, data)
 			case methodPUT:
+				reqCtx.heap.CarryMethod("PUT")
 				return client.PutAny(ctx, path, data)
 			default:
+				reqCtx.heap.CarryMethod("POST")
 				return client.PostAny(ctx, path, data)
 			}
 		})
 
 		reqCtx.heap.CarryAPIResponse(resp)
+		b.Logger().Info("Request finished", "code", resp.StatusCode)
 		return nil, err
 	}
 }
@@ -83,29 +93,54 @@ func bounceErrorCodes(_ context.Context, reqCtx *RequestHandlerContext[WildcardA
 	}
 
 	if resp.StatusCode == 403 {
-		return logical.ErrorResponse("access to this resource is denied by Mashery", errors.New(string(bodyStr))), nil
+		return logical.ErrorResponse("access to this resource is denied by Mashery (original body: '%s' returned for method %s)",
+			string(bodyStr),
+			reqCtx.heap.GetMethod(),
+		), nil
 	} else if resp.StatusCode == 404 {
-		return logical.ErrorResponse("requested object is not found in Mashery", errors.New(string(bodyStr))), nil
+		return logical.ErrorResponse("requested object is not found in Mashery (original body: '%s' returned for method %s)",
+			string(bodyStr),
+			reqCtx.heap.GetMethod(),
+		), nil
 	} else if resp.StatusCode > 299 {
-		return logical.ErrorResponse("unsupported status code %d", resp.StatusCode), nil
+		return logical.ErrorResponse("unsupported status code %d (original body: '%s' returned for method %s)",
+			resp.StatusCode, string(bodyStr), reqCtx.heap.GetMethod(),
+		), nil
 	}
 
 	return nil, nil
 }
 
 type HttpFetchFunction func(context.Context, v3client.WildcardClient) (*transport.WrappedResponse, error)
+type TokenRefreshFunc func(ctx context.Context, reqCtx *RequestHandlerContext[WildcardAPIResponseContext]) error
 
-func fetchWithErrorHandling(ctx context.Context, reqCtx *RequestHandlerContext[WildcardAPIResponseContext], sr *StoredRole, fetchFunc HttpFetchFunction) (*transport.WrappedResponse, error) {
+func (b *AuthPlugin) fetchWithErrorHandling(ctx context.Context, reqCtx *RequestHandlerContext[WildcardAPIResponseContext], fetchFunc HttpFetchFunction) (*transport.WrappedResponse, error) {
+	var tokenRefresher = func(ctx context.Context, reqCtx *RequestHandlerContext[WildcardAPIResponseContext]) error {
+		_, rv := b.ensureAccessTokenValid(ctx, reqCtx)
+		return rv
+	}
+
+	return b.doFetchWithErrorHandling(ctx, reqCtx, tokenRefresher, fetchFunc)
+}
+
+func (b *AuthPlugin) doFetchWithErrorHandling(ctx context.Context, reqCtx *RequestHandlerContext[WildcardAPIResponseContext], tokenRefresher TokenRefreshFunc, fetchFunc HttpFetchFunction) (*transport.WrappedResponse, error) {
 	for i := 0; i < 3; i++ {
-		client := reqCtx.plugin.GetMasheryV3Client(sr)
-		if resp, err := fetchFunc(ctx, client); err != nil {
+		// Ensure that access token is valid.
+		if tknRefreshErr := tokenRefresher(ctx, reqCtx); tknRefreshErr != nil {
+			return nil, tknRefreshErr
+		}
+
+		client := b.GetMasheryV3Client(reqCtx.heap.GetRole())
+
+		callCtx := v3client.ContextWithAccessToken(ctx, reqCtx.heap.GetRole().Usage.V3Token)
+		if resp, err := fetchFunc(callCtx, client); err != nil {
 			return nil, err
-		} else if errCode := resp.Header.Get("X-Mashery-Error-Code"); errCode == "ERR_403_DEVELOPER_INACTIVE" {
-			sr.Usage.ResetToken()
-			if _, err = ensureAccessTokenValid(ctx, reqCtx); err != nil {
-				return nil, err
-			} else {
+		} else if resp.StatusCode == 403 {
+			if errCode := resp.Header.Get("X-Mashery-Error-Code"); errCode == "ERR_403_DEVELOPER_INACTIVE" {
+				reqCtx.heap.GetRole().Usage.ResetToken()
 				continue
+			} else {
+				return nil, errors.New("mashery denies access to the selected resource")
 			}
 		} else {
 			return resp, err
@@ -303,24 +338,41 @@ func renderV3ResponseToEmpty(_ context.Context, _ *RequestHandlerContext[Wildcar
 	return nil, nil
 }
 
-func ensureAccessTokenValid(ctx context.Context, reqCtx *RequestHandlerContext[WildcardAPIResponseContext]) (*logical.Response, error) {
+func (b *AuthPlugin) ensureAccessTokenValid(ctx context.Context, reqCtx *RequestHandlerContext[WildcardAPIResponseContext]) (*logical.Response, error) {
 	role := reqCtx.heap.GetRole()
+	return nil, ensureAccessTokenValidForRole(ctx, b, reqCtx, role)
+}
+
+func (b *AuthPlugin) ensureAccessTokenValidWithRoleContext(ctx context.Context, reqCtx *RequestHandlerContext[RoleContext]) (*logical.Response, error) {
+	role := reqCtx.heap.GetRole()
+	return nil, ensureAccessTokenValidForRole(ctx, b, reqCtx, role)
+}
+
+func ensureAccessTokenValidForRole[T any](ctx context.Context, b *AuthPlugin, reqCtx *RequestHandlerContext[T], role *StoredRole) error {
+	if role == nil {
+		return errors.New("received a nil pointer to role; need an initialized StoreRole to request access token")
+	}
+
 	if role.Usage.V3TokenNeedsRenew() {
+		b.Logger().Info(fmt.Sprintf("stored token for role %s needs to be renewed for further operations", role.Name))
+
 		creds := role.asV3Credentials()
 
-		if tkn, err := reqCtx.plugin.GetOAuthHelper().RetrieveAccessTokenFor(&creds); err != nil {
-			return nil, err
+		if tkn, err := b.GetOAuthHelper().RetrieveAccessTokenFor(&creds); err != nil {
+			b.Logger().Error(fmt.Sprintf("attempt to renew token for role %s failed: %s", role.Name, err.Error()))
+			return err
 		} else {
-			role.Usage.V3Token = tkn.AccessToken
-			role.Usage.V3TokenExpiry = tkn.ExpiryTime().Unix()
+			role.Usage.ReplaceAccessToken(tkn.AccessToken, tkn.ExpiryTime().Unix())
+			b.Logger().Info(fmt.Sprintf("successfully renewed token for role %s", role.Name))
 
 			if writeErr := reqCtx.WritePath(ctx, roleUsagePath(reqCtx), &role.Usage); writeErr != nil {
-				return nil, writeErr
+				b.Logger().Error(fmt.Sprintf("failed to persist acquired token for role %s: %s", role.Name, writeErr.Error()))
+				return writeErr
 			}
 		}
 	}
 
-	return nil, nil
+	return nil
 }
 
 func retrieveV3AccessToken(_ context.Context, reqCtx *RequestHandlerContext[V3TokenContext]) (*logical.Response, error) {
@@ -343,14 +395,18 @@ func renderV3LeaseResponse(_ context.Context, reqCtx *RequestHandlerContext[V3To
 
 func renderV3PlainResponse(_ context.Context, reqCtx *RequestHandlerContext[V3TokenContext]) (*logical.Response, error) {
 	token := reqCtx.heap.GetV3TokenResponse()
+	expiryTime := token.ExpiryTime()
+
 	if token == nil {
 		return nil, errors.New("v3 response rendering called before the response is available")
 	}
 	rv := &logical.Response{
 		Data: map[string]interface{}{
-			secretAccessToken:           token.AccessToken,
-			secretAccessTokenExpiryTime: token.ExpiryTime(),
-			roleQpsField:                reqCtx.heap.GetRole().Keys.MaxQPS,
+			secretAccessToken:              token.AccessToken,
+			secretAccessTokenExpiryTime:    expiryTime,
+			secretAccessTokenExpiryEpoch:   expiryTime.Unix(),
+			secretAccessTokenTimeRemaining: token.TimeLeft(),
+			roleQpsField:                   reqCtx.heap.GetRole().Keys.MaxQPS,
 		},
 	}
 

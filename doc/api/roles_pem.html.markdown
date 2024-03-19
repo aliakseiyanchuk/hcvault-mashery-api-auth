@@ -2,8 +2,8 @@
 layout: api 
 page_title: /role/:roleName/pem - HTTP API 
 description: |-
-The `/role/:roleName/pem` endpoint is used to extract role's PEM-encoded certificate for encrypting
-data exchanges
+  The `/role/:roleName/pem` endpoint is used to extract role's PEM-encoded certificate for encrypting
+  data exchanges
 ---
 
 # `/roles/:roleName/pem`

@@ -3,6 +3,10 @@ run-name: Distro container
 
 on:
   workflow_dispatch:
+    inputs:
+      TAG:
+        required: true
+        description: Release tag to build a distribution container with
 
 env:
   REGISTRY: ghcr.io
@@ -25,6 +29,8 @@ jobs:
 
       - name: Checkout source code
         uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.TAG }}
 
       - name: Tidy modules
         run: go mod tidy
@@ -47,6 +53,8 @@ jobs:
         uses: docker/metadata-action@9ec57ed1fcdbf14dcef7dfbe97b2010124a938b7
         with:
           images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+          tags: |
+            type=semver,pattern={{version}},value=v1.0.0
 
       - name: Build and push Docker image
         id: push

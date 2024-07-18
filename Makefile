@@ -5,6 +5,7 @@ VERSION=0.5.1
 BINARY_NAME=hcvault-mashery-api-auth
 DOCKER_IMAGE=lspwd2/${BINARY_NAME}
 DISTRO_IMAGE?=lspwd2/${BINARY_NAME}-distro
+DISTRO_ROOT=./docker/distro-builder/dist
 BINARY=${BINARY_NAME}_v${VERSION}
 DEV_PLUGINS_DIR=./vault/plugins
 MASH_AUTH_DEV_BINARY=${BINARY}
@@ -94,23 +95,27 @@ create_multiplatform_builder:
 	docker buildx use mpbuilder
 
 compile_dist_container_binaries:
-	mkdir -p ./docker/distro-builder/dist/linux/amd64
-	mkdir -p ./docker/distro-builder/dist/linux/arm64
-	mkdir -p ./docker/distro-builder/dist/linux/arm/v6
-	mkdir -p ./docker/distro-builder/dist/linux/386
+	mkdir -p ${DISTRO_ROOT}/linux/amd64
+	mkdir -p ${DISTRO_ROOT}/linux/arm64
+	mkdir -p ${DISTRO_ROOT}/linux/arm/v6
+	mkdir -p ${DISTRO_ROOT}/linux/arm/v7
+	mkdir -p ${DISTRO_ROOT}/linux/386
 
-	find ./docker/distro-builder/dist -name ${BINARY_NAME}* -exec /bin/rm {} \;
-	GOOS=linux GOARCH=arm64 		go build -o ./docker/distro-builder/dist/linux/arm64/${BINARY_NAME} 	cmd/main.go
-	openssl dgst -sha256 ./docker/distro-builder/dist/linux/arm64/${BINARY_NAME} > ./docker/tls-enabled/dist/linux/arm64/${BINARY_NAME}.sha256
+	find ${DISTRO_ROOT} -name ${BINARY_NAME}* -exec /bin/rm {} \;
+	GOOS=linux GOARCH=arm64 		go build -o ${DISTRO_ROOT}/linux/arm64/${BINARY_NAME} 	cmd/main.go
+	openssl dgst -sha256 ${DISTRO_ROOT}/linux/arm64/${BINARY_NAME} > ${DISTRO_ROOT}/linux/arm64/${BINARY_NAME}.sha256
 
-	GOOS=linux GOARCH=arm GOARM=6 	go build -o ./docker/distro-builder/dist/linux/arm/v6/${BINARY_NAME} 	cmd/main.go
-	openssl dgst -sha256 ./docker/distro-builder/dist/linux/arm/v6/${BINARY_NAME} > ./docker/tls-enabled/dist/linux/arm/v6/${BINARY_NAME}.sha256
+	GOOS=linux GOARCH=arm GOARM=6 	go build -o ${DISTRO_ROOT}/linux/arm/v6/${BINARY_NAME} 	cmd/main.go
+	openssl dgst -sha256 ${DISTRO_ROOT}/linux/arm/v6/${BINARY_NAME} > ${DISTRO_ROOT}/linux/arm/v6/${BINARY_NAME}.sha256
 
-	GOOS=linux GOARCH=amd64 go build -o ./docker/distro-builder/dist/linux/amd64/${BINARY_NAME} cmd/main.go
-	openssl dgst -sha256 ./docker/distro-builder/dist/linux/amd64/${BINARY_NAME} > ./docker/tls-enabled/dist/linux/amd64/${BINARY_NAME}.sha256
+	GOOS=linux GOARCH=arm GOARM=7 	go build -o ${DISTRO_ROOT}/linux/arm/v7/${BINARY_NAME} 	cmd/main.go
+	openssl dgst -sha256 ${DISTRO_ROOT}/linux/arm/v7/${BINARY_NAME} > ${DISTRO_ROOT}/linux/arm/v7/${BINARY_NAME}.sha256
 
-	GOOS=linux GOARCH=386 			go build -o ./docker/distro-builder/dist/linux/386/${BINARY_NAME}		cmd/main.go
-	openssl dgst -sha256 ./docker/distro-builder/dist/linux/386/${BINARY_NAME} > ./docker/tls-enabled/dist/linux/386/${BINARY_NAME}.sha256
+	GOOS=linux GOARCH=amd64 go build -o ${DISTRO_ROOT}/linux/amd64/${BINARY_NAME} cmd/main.go
+	openssl dgst -sha256 ${DISTRO_ROOT}/linux/amd64/${BINARY_NAME} > ${DISTRO_ROOT}/linux/amd64/${BINARY_NAME}.sha256
+
+	GOOS=linux GOARCH=386 			go build -o ${DISTRO_ROOT}/linux/386/${BINARY_NAME}		cmd/main.go
+	openssl dgst -sha256 ${DISTRO_ROOT}/linux/386/${BINARY_NAME} > ${DISTRO_ROOT}/linux/386/${BINARY_NAME}.sha256
 
 create_distro_builder: compile_dist_container_binaries
 	docker build ./docker/distro-builder/ -t ${DISTRO_IMAGE}

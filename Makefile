@@ -1,9 +1,10 @@
 TEST?=$$(go list ./... | grep -v 'vendor')
 HOSTNAME=github.com
 NAMESPACE=aliakseiyanchuk
-VERSION=0.5
+VERSION=0.5.1
 BINARY_NAME=hcvault-mashery-api-auth
 DOCKER_IMAGE=lspwd2/${BINARY_NAME}
+DISTRO_IMAGE?=lspwd2/${BINARY_NAME}-distro
 BINARY=${BINARY_NAME}_v${VERSION}
 DEV_PLUGINS_DIR=./vault/plugins
 MASH_AUTH_DEV_BINARY=${BINARY}
@@ -91,6 +92,30 @@ vendor:
 create_multiplatform_builder:
 	docker buildx create --name mpbuilder --driver docker-container --bootstrap
 	docker buildx use mpbuilder
+
+compile_dist_container_binaries:
+	mkdir -p ./docker/distro-builder/dist/linux/amd64
+	mkdir -p ./docker/distro-builder/dist/linux/arm64
+	mkdir -p ./docker/distro-builder/dist/linux/arm/v6
+	mkdir -p ./docker/distro-builder/dist/linux/386
+
+	find ./docker/distro-builder/dist -name ${BINARY_NAME}* -exec /bin/rm {} \;
+	GOOS=linux GOARCH=arm64 		go build -o ./docker/distro-builder/dist/linux/arm64/${BINARY_NAME} 	cmd/main.go
+	openssl dgst -sha256 ./docker/distro-builder/dist/linux/arm64/${BINARY_NAME} > ./docker/tls-enabled/dist/linux/arm64/${BINARY_NAME}.sha256
+
+	GOOS=linux GOARCH=arm GOARM=6 	go build -o ./docker/distro-builder/dist/linux/arm/v6/${BINARY_NAME} 	cmd/main.go
+	openssl dgst -sha256 ./docker/distro-builder/dist/linux/arm/v6/${BINARY_NAME} > ./docker/tls-enabled/dist/linux/arm/v6/${BINARY_NAME}.sha256
+
+	GOOS=linux GOARCH=amd64 go build -o ./docker/distro-builder/dist/linux/amd64/${BINARY_NAME} cmd/main.go
+	openssl dgst -sha256 ./docker/distro-builder/dist/linux/amd64/${BINARY_NAME} > ./docker/tls-enabled/dist/linux/amd64/${BINARY_NAME}.sha256
+
+	GOOS=linux GOARCH=386 			go build -o ./docker/distro-builder/dist/linux/386/${BINARY_NAME}		cmd/main.go
+	openssl dgst -sha256 ./docker/distro-builder/dist/linux/386/${BINARY_NAME} > ./docker/tls-enabled/dist/linux/386/${BINARY_NAME}.sha256
+
+create_distro_builder: compile_dist_container_binaries
+	docker build ./docker/distro-builder/ -t ${DISTRO_IMAGE}
+	docker push ${DISTRO_IMAGE}
+
 
 compile_tls_container_binaries:
 	mkdir -p ./docker/tls-enabled/dist/linux/amd64

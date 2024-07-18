@@ -1,9 +1,9 @@
 module yanchuk.nl/hcvault-mashery-api-auth
 
-go 1.18
+go 1.21
 
 require (
-	github.com/aliakseiyanchuk/mashery-v3-go-client v0.0.0-20210110193017-ba218ef21d7e
+	github.com/aliakseiyanchuk/mashery-v3-go-client v0.9.0
 	github.com/cucumber/godog v0.12.0
 	github.com/hashicorp/errwrap v1.0.0
 	github.com/hashicorp/go-hclog v0.14.1
@@ -13,7 +13,7 @@ require (
 	github.com/rdumont/assistdog v0.0.0-20201106100018-168b06230d14
 
 	// Testing dependencies
-	github.com/stretchr/testify v1.7.0
+	github.com/stretchr/testify v1.9.0
 )
 
 require (
@@ -52,7 +52,7 @@ require (
 	github.com/pmezard/go-difflib v1.0.0 // indirect
 	github.com/ryanuber/go-glob v1.0.0 // indirect
 	github.com/spf13/pflag v1.0.5 // indirect
-	github.com/stretchr/objx v0.1.1 // indirect
+	github.com/stretchr/objx v0.5.2 // indirect
 	golang.org/x/crypto v0.0.0-20200604202706-70a84ac30bf9 // indirect
 	golang.org/x/net v0.0.0-20200602114024-627f9648deb9 // indirect
 	golang.org/x/sys v0.0.0-20200602225109-6fdc65e7d980 // indirect
@@ -63,7 +63,7 @@ require (
 	google.golang.org/protobuf v1.25.0 // indirect
 	gopkg.in/square/go-jose.v2 v2.5.1 // indirect
 	gopkg.in/yaml.v2 v2.4.0 // indirect
-	gopkg.in/yaml.v3 v3.0.0-20200615113413-eeeca48fe776 // indirect
+	gopkg.in/yaml.v3 v3.0.1 // indirect
 )
 
-replace github.com/aliakseiyanchuk/mashery-v3-go-client => ../mashery-v3-go-client
+//replace github.com/aliakseiyanchuk/mashery-v3-go-client => ../mashery-v3-go-client

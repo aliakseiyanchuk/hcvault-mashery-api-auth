@@ -5,6 +5,7 @@ VERSION=0.5.1
 BINARY_NAME=hcvault-mashery-api-auth
 DOCKER_IMAGE=lspwd2/${BINARY_NAME}
 DISTRO_IMAGE?=lspwd2/${BINARY_NAME}-distro
+DISTRO_VAULT_IMAGE?=lspwd2/vault-${BINARY_NAME}-bundle
 DISTRO_ROOT=./docker/distro-builder/dist
 BINARY=${BINARY_NAME}_v${VERSION}
 DEV_PLUGINS_DIR=./vault/plugins
@@ -94,7 +95,7 @@ create_multiplatform_builder:
 	docker buildx create --name mpbuilder --driver docker-container --bootstrap
 	docker buildx use mpbuilder
 
-compile_dist_container_binaries:
+dist_container_binaries:
 	mkdir -p ${DISTRO_ROOT}/linux/amd64
 	mkdir -p ${DISTRO_ROOT}/linux/arm64
 	mkdir -p ${DISTRO_ROOT}/linux/arm/v6
@@ -117,7 +118,7 @@ compile_dist_container_binaries:
 	GOOS=linux GOARCH=386 			go build -o ${DISTRO_ROOT}/linux/386/${BINARY_NAME}		cmd/main.go
 	openssl dgst -sha256 ${DISTRO_ROOT}/linux/386/${BINARY_NAME} > ${DISTRO_ROOT}/linux/386/${BINARY_NAME}.sha256
 
-create_distro_builder: compile_dist_container_binaries
+distro_builder: dist_container_binaries
 	docker build ./docker/distro-builder/ -t ${DISTRO_IMAGE}
 	docker push ${DISTRO_IMAGE}
 
@@ -148,6 +149,13 @@ create_tls_enabled_container: compile_tls_container_binaries
 		-t ${DOCKER_IMAGE}:${VERSION} -t ${DOCKER_IMAGE}:latest \
 		--push \
 		./docker/tls-enabled
+
+prebuilt_vault:
+	docker build \
+		--build-arg PLATFORM=linux/arm64 \
+		-t ${DISTRO_VAULT_IMAGE}:${VERSION} -t ${DISTRO_VAULT_IMAGE}:latest \
+		--load \
+		./docker/from-distro
 
 run_tls_enabled_container: create_tls_enabled_container
 	docker run --rm --cap-add=IPC_LOCK -p 127.0.0.1:8200:8200 ${DOCKER_IMAGE}:latest

@@ -8,3 +8,6 @@ USER distro
 WORKDIR /home/distro
 
 COPY ./dist /home/distro/
+
+ENTRYPOINT ["/bin/sh"]
+CMD [ "-c", "echo 'Use this container to copy files' && exit 1" ]

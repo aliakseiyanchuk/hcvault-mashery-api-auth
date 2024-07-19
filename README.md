@@ -110,6 +110,6 @@ Note `-v` flag will allow printing Cucumber scenario steps.
 
 # Installing and running
 
-Consult [reference manual readme](./doc/index.html.markdown) for information operational limitations and installation
+Consult [reference manual readme](./doc/setup.html.markdown) for information operational limitations and installation
 steps.
 

@@ -60,7 +60,7 @@ jobs:
         with:
           images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
           tags: |
-            type=tag,event=tag
+            type=raw,value=${{ inputs.TAG }}
 
       - name: Build and push Docker image
         id: push

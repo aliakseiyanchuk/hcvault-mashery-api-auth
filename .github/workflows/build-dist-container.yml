@@ -11,6 +11,7 @@ on:
         description: Make this build latest
         required: false
         default: "no"
+        type: choice
         options:
           - "yes"
           - "no"

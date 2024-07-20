@@ -1,4 +1,4 @@
-FROM ghcr.io/aliakseiyanchuk/hcvault-mashery-api-auth:sha256-55e787a63a32ca62bcca7f3e646a90643e10f055449700e3df7293f9726a5ba4 AS hcvault-distro
+FROM ghcr.io/aliakseiyanchuk/hcvault-mashery-api-auth:0.5.1 AS hcvault-distro
 
 FROM hashicorp/vault:latest
 ARG PLATFORM

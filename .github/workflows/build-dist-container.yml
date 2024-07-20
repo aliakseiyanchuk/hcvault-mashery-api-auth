@@ -7,6 +7,13 @@ on:
       TAG:
         required: true
         description: Release tag to build a distribution container with
+      set_latest:
+        description: Make this build latest
+        required: false
+        default: "no"
+        options:
+          - "yes"
+          - "no"
 
 env:
   REGISTRY: ghcr.io
@@ -61,6 +68,7 @@ jobs:
           images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
           tags: |
             type=raw,value=${{ inputs.TAG }}
+            type=raw,value=latest,enable=${{ 'yes' == inputs.set_latest }}
 
       - name: Build and push Docker image
         id: push

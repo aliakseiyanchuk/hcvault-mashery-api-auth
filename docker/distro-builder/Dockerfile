@@ -4,10 +4,13 @@ LABEL org.opencontainers.image.title="HashiCorp Vault secret engine for Mashery 
 LABEL org.opencontainers.image.description="Contains pre-built HashiCorp secrets engine for use with deriving custom containers"
 LABEL org.opencontainers.image.authors="Alaiksei Yanchuk"
 
-USER distro
 WORKDIR /home/distro
 
-COPY ./dist /home/distro/
+COPY ./sig.sh ./dist/ /home/distro/
+RUN chmod u+x sig.sh
 
-ENTRYPOINT ["/bin/sh"]
-CMD [ "-c", "echo 'Use this container to copy files' && exit 1" ]
+
+RUN adduser -D distro
+USER distro
+
+ENTRYPOINT ["/bin/sh", "/home/distro/sig.sh"]

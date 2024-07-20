@@ -3,9 +3,14 @@
 if [ "$1" = "" ] ; then
   echo "Please supply an architecture"
   exit 1
-elif [ ! -f /home/distro/$1/hcvault-mashery-api-auth.sha256 ] ; then
+fi
+
+FILE=$(find /home/distro/$1 -name 'hcvault-mashery-api-auth_v*.sha256' )
+
+if [ "$FILE" = "" ] ; then
   echo "No signature for architecture $1"
   exit 1
 else
-  cat /home/distro/$1/hcvault-mashery-api-auth.sha256 | awk -F'= ' '{print $2}'
+  basename $FILE .sha256
+  cat $FILE | awk -F'= ' '{print $2}'
 fi

@@ -1,7 +1,7 @@
 TEST?=$$(go list ./... | grep -v 'vendor')
 HOSTNAME=github.com
 NAMESPACE=aliakseiyanchuk
-VERSION=0.5.1
+VERSION?=0.5.1
 BINARY_NAME=hcvault-mashery-api-auth
 DOCKER_IMAGE=lspwd2/${BINARY_NAME}
 DISTRO_IMAGE?=lspwd2/${BINARY_NAME}-distro
@@ -11,6 +11,7 @@ BINARY=${BINARY_NAME}_v${VERSION}
 DEV_PLUGINS_DIR=./vault/plugins
 MASH_AUTH_DEV_BINARY=${BINARY}
 MULTIPLATFORMS=linux/amd64,linux/arm64,linux/arm/v6,linux/386
+BUNDLE_VAULT_PLATFORM?=linux/amd64
 
 default: install
 
@@ -103,20 +104,20 @@ dist_container_binaries:
 	mkdir -p ${DISTRO_ROOT}/linux/386
 
 	find ${DISTRO_ROOT} -name ${BINARY_NAME}* -exec /bin/rm {} \;
-	GOOS=linux GOARCH=arm64 		go build -o ${DISTRO_ROOT}/linux/arm64/${BINARY_NAME} 	cmd/main.go
-	openssl dgst -sha256 ${DISTRO_ROOT}/linux/arm64/${BINARY_NAME} > ${DISTRO_ROOT}/linux/arm64/${BINARY_NAME}.sha256
+	GOOS=linux GOARCH=arm64 		go build -o ${DISTRO_ROOT}/linux/arm64/${BINARY_NAME}_v${VERSION} 	cmd/main.go
+	openssl dgst -sha256 ${DISTRO_ROOT}/linux/arm64/${BINARY_NAME}_v${VERSION} > ${DISTRO_ROOT}/linux/arm64/${BINARY_NAME}_v${VERSION}.sha256
 
-	GOOS=linux GOARCH=arm GOARM=6 	go build -o ${DISTRO_ROOT}/linux/arm/v6/${BINARY_NAME} 	cmd/main.go
-	openssl dgst -sha256 ${DISTRO_ROOT}/linux/arm/v6/${BINARY_NAME} > ${DISTRO_ROOT}/linux/arm/v6/${BINARY_NAME}.sha256
+	GOOS=linux GOARCH=arm GOARM=6 	go build -o ${DISTRO_ROOT}/linux/arm/v6/${BINARY_NAME}_v${VERSION} 	cmd/main.go
+	openssl dgst -sha256 ${DISTRO_ROOT}/linux/arm/v6/${BINARY_NAME}_v${VERSION} > ${DISTRO_ROOT}/linux/arm/v6/${BINARY_NAME}_v${VERSION}.sha256
 
-	GOOS=linux GOARCH=arm GOARM=7 	go build -o ${DISTRO_ROOT}/linux/arm/v7/${BINARY_NAME} 	cmd/main.go
-	openssl dgst -sha256 ${DISTRO_ROOT}/linux/arm/v7/${BINARY_NAME} > ${DISTRO_ROOT}/linux/arm/v7/${BINARY_NAME}.sha256
+	GOOS=linux GOARCH=arm GOARM=7 	go build -o ${DISTRO_ROOT}/linux/arm/v7/${BINARY_NAME}_v${VERSION}	cmd/main.go
+	openssl dgst -sha256 ${DISTRO_ROOT}/linux/arm/v7/${BINARY_NAME}_v${VERSION} > ${DISTRO_ROOT}/linux/arm/v7/${BINARY_NAME}_v${VERSION}.sha256
 
-	GOOS=linux GOARCH=amd64 go build -o ${DISTRO_ROOT}/linux/amd64/${BINARY_NAME} cmd/main.go
-	openssl dgst -sha256 ${DISTRO_ROOT}/linux/amd64/${BINARY_NAME} > ${DISTRO_ROOT}/linux/amd64/${BINARY_NAME}.sha256
+	GOOS=linux GOARCH=amd64 go build -o ${DISTRO_ROOT}/linux/amd64/${BINARY_NAME}_v${VERSION} cmd/main.go
+	openssl dgst -sha256 ${DISTRO_ROOT}/linux/amd64/${BINARY_NAME}_v${VERSION} > ${DISTRO_ROOT}/linux/amd64/${BINARY_NAME}_v${VERSION}.sha256
 
-	GOOS=linux GOARCH=386 			go build -o ${DISTRO_ROOT}/linux/386/${BINARY_NAME}		cmd/main.go
-	openssl dgst -sha256 ${DISTRO_ROOT}/linux/386/${BINARY_NAME} > ${DISTRO_ROOT}/linux/386/${BINARY_NAME}.sha256
+	GOOS=linux GOARCH=386 			go build -o ${DISTRO_ROOT}/linux/386/${BINARY_NAME}_v${VERSION}		cmd/main.go
+	openssl dgst -sha256 ${DISTRO_ROOT}/linux/386/${BINARY_NAME}_v${VERSION} > ${DISTRO_ROOT}/linux/386/${BINARY_NAME}_v${VERSION}.sha256
 
 distro_builder: dist_container_binaries
 	docker build ./docker/distro-builder/ -t ${DISTRO_IMAGE}
@@ -152,7 +153,7 @@ create_tls_enabled_container: compile_tls_container_binaries
 
 prebuilt_vault:
 	docker build \
-		--build-arg PLATFORM=linux/arm64 \
+		--build-arg PLATFORM=${BUNDLE_VAULT_PLATFORM} \
 		-t ${DISTRO_VAULT_IMAGE}:${VERSION} -t ${DISTRO_VAULT_IMAGE}:latest \
 		--load \
 		./docker/from-distro

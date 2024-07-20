@@ -1,10 +1,11 @@
 #!/bin/sh
 
-if [ "$1" = "" ] ; then
-  echo "Please supply an architecture"
-  exit 1
+LOC="default"
+
+if [ "$1" != "" ] ; then
+ LOC="dist/$1"
 fi
-FILE=$(find /home/distro/$1 -name 'hcvault-mashery-api-auth_v*.sha256' )
+FILE=$(find /home/distro/$LOC -name 'hcvault-mashery-api-auth_v*.sha256' )
 
 if [ "$FILE" = "" ] ; then
   echo "No signature found"

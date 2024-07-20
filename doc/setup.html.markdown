@@ -331,7 +331,7 @@ vault secrets enable -path=mash-creds \
     -allowed-response-headers="X-Mashery-Responder" \
     -allowed-response-headers="X-Server-Date" \
     -allowed-response-headers="X-Proxy-Mode" \
-    -allowed-response-headers="WWW-Authenticate" 
+    -allowed-response-headers="WWW-Authenticate" \
     -allowed-response-headers="X-Mashery-Error-Code" \
     -allowed-response-headers="X-Mashery-Responder" \
     mashery-api-auth
